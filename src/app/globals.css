@@ -1,0 +1,94 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+* { box-sizing: border-box; }
+
+html {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+:root {
+  --gold: #C9A84C;
+  --gold-light: #F5E9C8;
+  --gold-dark: #8A6D20;
+}
+
+/* Mobile-first phone shell */
+body {
+  background: #f1f1f1;
+  min-height: 100vh;
+}
+
+.phone-shell {
+  width: 100%;
+  max-width: 430px;
+  min-height: 100svh;
+  margin: 0 auto;
+  background: white;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* At larger screens, show as centered phone */
+@media (min-width: 500px) {
+  body { display: flex; justify-content: center; padding: 0; }
+  .phone-shell { min-height: 100svh; box-shadow: 0 0 60px rgba(0,0,0,0.12); }
+}
+
+/* Pax dark screens */
+.pax-screen {
+  background: #111111;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 28px 24px 40px;
+  color: white;
+  min-height: 100svh;
+}
+
+/* Chat bubbles */
+.bubble-mine {
+  background: #111111;
+  color: white;
+  border-radius: 18px 18px 4px 18px;
+}
+
+.bubble-theirs {
+  background: #f3f4f6;
+  color: #111111;
+  border-radius: 18px 18px 18px 4px;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #e5e5e5; border-radius: 2px; }
+
+/* Input focus */
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  border-color: #111111 !important;
+}
+
+/* Safe area */
+.safe-bottom { padding-bottom: max(20px, env(safe-area-inset-bottom)); }
+
+/* Animation */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-up { animation: fadeUp 0.3s ease; }
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+.animate-slide-up { animation: slideUp 0.25s ease; }

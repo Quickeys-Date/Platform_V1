@@ -1,6 +1,5 @@
 'use client'
-// src/app/report/page.tsx
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import toast from 'react-hot-toast'
 
@@ -12,7 +11,7 @@ const REPORT_OPTIONS = [
   { id: 'REPORT_OTHER', label: 'Other', icon: '⋯' },
 ]
 
-export default function ReportPage() {
+function ReportContent() {
   const router = useRouter()
   const params = useSearchParams()
   const reportedId = params.get('reported_id')
@@ -44,8 +43,8 @@ export default function ReportPage() {
       <p className="text-gray-500 leading-relaxed mb-10">
         Thank you. Your report has been received and will be reviewed by the QuicKeys™ team.
       </p>
-      {/* Spec: "Button: 'Return' — returns to previous screen (Chat or Connection Profile)" */}
-      <button onClick={() => router.back()} className="w-full bg-black text-white py-4 rounded-xl font-semibold">
+      <button onClick={() => router.back()}
+        className="w-full bg-black text-white py-4 rounded-xl font-semibold">
         Return
       </button>
     </div>
@@ -92,5 +91,17 @@ export default function ReportPage() {
         </button>
       </div>
     </div>
+  )
+}
+
+export default function ReportPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-svh">
+        <div className="w-6 h-6 border-2 border-black border-t-transparent rounded-full animate-spin" />
+      </div>
+    }>
+      <ReportContent />
+    </Suspense>
   )
 }

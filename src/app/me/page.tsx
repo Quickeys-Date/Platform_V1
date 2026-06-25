@@ -1,9 +1,6 @@
 'use client'
 // src/app/me/page.tsx — S-18 User Profile
-// Editable: photos, bio, connection_prompt, age_range, location_radius, interested_in
-// Non-editable: first_name, date_of_birth, email (contact founders to change)
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { Profile } from '@/lib/types'
 import { BottomNav } from '@/components/BottomNav'
@@ -13,7 +10,6 @@ const RADII = ['25mi', '50mi', '100mi', 'Anywhere']
 const INTERESTS = ['Men', 'Women', 'Everyone']
 
 export default function MyProfilePage() {
-  const router = useRouter()
   const supabase = createClient()
   const [profile, setProfile] = useState<Profile | null>(null)
   const [editing, setEditing] = useState(false)
@@ -44,7 +40,6 @@ export default function MyProfilePage() {
           location_radius: data.location_radius || '25mi',
           interested_in: data.interested_in || [],
         })
-        // Load signed URLs for photos
         loadPhotoUrls(data.photos || [])
       })
     })
@@ -119,7 +114,7 @@ export default function MyProfilePage() {
 
   const signOut = async () => {
     await supabase.auth.signOut()
-    router.push('/')
+    window.location.href = '/'
   }
 
   const changePassword = async () => {
@@ -138,7 +133,7 @@ export default function MyProfilePage() {
   return (
     <div className="flex flex-col min-h-svh">
       <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 sticky top-0 bg-white z-10">
-        <button onClick={() => router.push('/feed')} className="text-xl">←</button>
+        <button onClick={() => window.location.href = '/feed'} className="text-xl">←</button>
         <h1 className="font-bold text-base">My Profile</h1>
         <button onClick={() => editing ? save() : setEditing(true)}
           className="font-semibold text-sm" disabled={saving}>
@@ -147,7 +142,7 @@ export default function MyProfilePage() {
       </div>
 
       <div className="flex-1 overflow-y-auto pb-24">
-        {/* Identity — non-editable fields */}
+        {/* Identity */}
         <div className="px-5 py-5 border-b border-gray-100">
           <div className="flex items-center gap-4 mb-3">
             {photoUrls[0] ? (
@@ -158,17 +153,16 @@ export default function MyProfilePage() {
             <div>
               <h2 className="text-xl font-black tracking-tight">{profile.first_name}</h2>
               <p className="text-sm text-gray-500">{profile.email}</p>
-              <p className="text-xs text-gray-400 mt-0.5">{profile.city}, {profile.state} · Age {profile.age}</p>
+              <p className="text-xs text-gray-400 mt-0.5">{profile.city}, {profile.state}</p>
             </div>
           </div>
-          {/* Non-editable notice per spec */}
           <p className="text-xs text-gray-400 italic">
             First name, date of birth, and email cannot be changed here.{' '}
             <a href="mailto:ofelia@quickeysdating.com" className="underline">Contact founders</a> to update.
           </p>
         </div>
 
-        {/* Photos — editable: add/remove within 1-3 limit */}
+        {/* Photos */}
         <div className="px-5 py-4 border-b border-gray-100">
           <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Photos (1–3)</h2>
           <div className="grid grid-cols-3 gap-3">
@@ -232,7 +226,7 @@ export default function MyProfilePage() {
           )}
         </div>
 
-        {/* Interested in — editable */}
+        {/* Interested in */}
         <div className="px-5 py-4 border-b border-gray-100">
           <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Interested in</h2>
           {editing ? (
@@ -250,7 +244,7 @@ export default function MyProfilePage() {
           )}
         </div>
 
-        {/* Age range — editable */}
+        {/* Age range */}
         <div className="px-5 py-4 border-b border-gray-100">
           <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
             Age range: {editing ? form.age_range_min : profile.age_range_min}–{editing ? form.age_range_max : profile.age_range_max}
@@ -275,7 +269,7 @@ export default function MyProfilePage() {
           )}
         </div>
 
-        {/* Location radius — editable */}
+        {/* Distance */}
         <div className="px-5 py-4 border-b border-gray-100">
           <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Distance</h2>
           {editing ? (

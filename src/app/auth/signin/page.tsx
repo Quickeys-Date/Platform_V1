@@ -2,13 +2,9 @@
 // src/app/auth/signin/page.tsx
 import { useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import toast from 'react-hot-toast'
-import { trackLogin } from '@/hooks/useUsageTracking'
 
 export default function SignInPage() {
-  const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [showPass, setShowPass] = useState(false)
   const [form, setForm] = useState({ email: '', password: '', remember: false })
@@ -18,30 +14,45 @@ export default function SignInPage() {
     e.preventDefault()
     setError('')
     setLoading(true)
+
     const supabase = createClient()
 
-    const { data, error } = await supabase.auth.signInWithPassword({
+    const { data, error: authError } = await supabase.auth.signInWithPassword({
       email: form.email,
       password: form.password,
     })
 
-    if (error) { setError('Invalid email or password.'); setLoading(false); return }
+    if (authError) {
+      setError('Invalid email or password.')
+      setLoading(false)
+      return
+    }
 
-    // Check if profile is complete
+    if (!data.user) {
+      setError('Login failed. Please try again.')
+      setLoading(false)
+      return
+    }
+
+    // Fetch profile to determine where to redirect
     const { data: profile } = await supabase
       .from('profiles')
       .select('profile_complete, pax_onboarded, role')
       .eq('id', data.user.id)
       .single()
 
-    if (profile?.role === 'ADMIN') {
-      trackLogin(); router.push('/admin/dashboard')
-    } else if (!profile?.profile_complete) {
-      trackLogin(); router.push('/onboarding/profile')
-    } else if (!profile?.pax_onboarded) {
-      router.push('/onboarding/welcome')
+    // Use window.location.href for hard navigation so session cookie
+    // is guaranteed to be sent with the next request
+    if (!profile || profile.role === undefined) {
+      window.location.href = '/onboarding/profile'
+    } else if (profile.role === 'ADMIN') {
+      window.location.href = '/admin/dashboard'
+    } else if (!profile.profile_complete) {
+      window.location.href = '/onboarding/profile'
+    } else if (!profile.pax_onboarded) {
+      window.location.href = '/onboarding/pax'
     } else {
-      trackLogin(); router.push('/feed')
+      window.location.href = '/feed'
     }
   }
 

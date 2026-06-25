@@ -1,18 +1,15 @@
 'use client'
 // src/app/onboarding/pax/page.tsx
 // S-05 Welcome, S-06 Meet Pax Intro, S-07 Mini Example, S-08 Pax Responds
-// All copy is LOCKED per spec. Do not alter without founder approval.
+// All copy is LOCKED per spec.
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+
+const PAX_INTRO_ORIENTATION_TEXT = `When we're disappointed, it's easy to make ourselves the explanation.\n\nSometimes the most useful first step is recognizing there may not be enough information yet to draw a conclusion.`
 
 type Step = 'welcome' | 'intro' | 'example' | 'responds'
 
-// S-08 hardcoded copy — NOT retrieved from Pax Content Library per spec
-const PAX_INTRO_ORIENTATION_TEXT = `When we're disappointed, it's easy to make ourselves the explanation.\n\nSometimes the most useful first step is recognizing there may not be enough information yet to draw a conclusion.`
-
 export default function PaxOnboardingPage() {
-  const router = useRouter()
   const [step, setStep] = useState<Step>('welcome')
   const [selected, setSelected] = useState<string | null>(null)
   const [firstName, setFirstName] = useState('')
@@ -22,7 +19,7 @@ export default function PaxOnboardingPage() {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (user) {
         supabase.from('profiles').select('first_name').eq('id', user.id).single()
-          .then(({ data }) => { if (data) setFirstName(data.first_name) })
+          .then(({ data }) => { if (data?.first_name) setFirstName(data.first_name) })
       }
     })
   }, []) // eslint-disable-line
@@ -32,10 +29,10 @@ export default function PaxOnboardingPage() {
     if (user) {
       await supabase.from('profiles').update({ pax_onboarded: true }).eq('id', user.id)
     }
-    router.push('/feed')
+    // Use window.location.href so session cookie is sent with next request
+    window.location.href = '/feed'
   }
 
-  // S-05 Welcome — fires once per user only
   if (step === 'welcome') return (
     <div className="flex flex-col min-h-svh items-center justify-center px-8 text-center animate-fade-up">
       <div className="text-6xl mb-6">🗝️</div>
@@ -45,7 +42,6 @@ export default function PaxOnboardingPage() {
       <p className="text-gray-500 text-lg leading-relaxed mb-12">
         Before you meet anyone, we want to introduce you to Pax.
       </p>
-      {/* No skip option */}
       <button onClick={() => setStep('intro')}
         className="w-full bg-black text-white py-4 rounded-xl font-semibold text-base">
         Meet Pax
@@ -53,12 +49,11 @@ export default function PaxOnboardingPage() {
     </div>
   )
 
-  // S-06 Meet Pax Introduction — copy locked, no skip, no back button
   if (step === 'intro') return (
     <div className="pax-screen animate-fade-up">
       <div className="font-black text-lg mb-8" style={{ color: '#C9A84C' }}>Pax™</div>
       <div className="flex-1 flex flex-col justify-center">
-        <p className="text-xl font-medium leading-relaxed tracking-tight" style={{ color: 'white' }}>
+        <p className="text-xl font-medium leading-relaxed tracking-tight text-white">
           I'm Pax.<br /><br />
           Most dating apps help you find people.<br /><br />
           I help you think clearly about the people you meet.<br /><br />
@@ -66,7 +61,6 @@ export default function PaxOnboardingPage() {
           When that happens, I'm here to help you slow down, see things more clearly, and decide what matters next.
         </p>
       </div>
-      {/* No skip. No back button. */}
       <button onClick={() => setStep('example')}
         className="w-full bg-white text-black py-4 rounded-xl font-semibold text-base mt-8">
         Continue
@@ -74,7 +68,6 @@ export default function PaxOnboardingPage() {
     </div>
   )
 
-  // S-07 Meet Pax Mini Example
   if (step === 'example') return (
     <div className="pax-screen animate-fade-up">
       <div className="font-black text-lg mb-6" style={{ color: '#C9A84C' }}>Pax™</div>
@@ -99,7 +92,6 @@ export default function PaxOnboardingPage() {
           </button>
         ))}
       </div>
-      {/* Selection required before Continue activates — both options lead to same response */}
       <button disabled={!selected} onClick={() => setStep('responds')}
         className={`w-full py-4 rounded-xl font-semibold text-base mt-6 transition-all
           ${selected ? 'bg-white text-black' : 'bg-white/20 text-white/40'}`}>
@@ -108,14 +100,12 @@ export default function PaxOnboardingPage() {
     </div>
   )
 
-  // S-08 Pax Responds — PAX_INTRO_ORIENTATION hardcoded, fires once, no feedback prompt
   if (step === 'responds') return (
     <div className="pax-screen animate-fade-up">
       <div className="font-black text-lg mb-6" style={{ color: '#C9A84C' }}>Pax™</div>
       <div className="flex-1 flex flex-col justify-center">
         <div className="rounded-xl p-6"
           style={{ background: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.3)' }}>
-          {/* Hardcoded — not retrieved via state ID lookup per V1 spec */}
           {PAX_INTRO_ORIENTATION_TEXT.split('\n\n').map((para, i) => (
             <p key={i} className={`text-lg leading-relaxed tracking-tight text-white ${i > 0 ? 'mt-4' : ''}`}>
               {para}
@@ -123,7 +113,6 @@ export default function PaxOnboardingPage() {
           ))}
         </div>
       </div>
-      {/* No feedback prompt on this screen */}
       <button onClick={finish}
         className="w-full bg-white text-black py-4 rounded-xl font-semibold text-base mt-8">
         I Understand

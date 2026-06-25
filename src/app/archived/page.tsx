@@ -73,7 +73,7 @@ export default function ArchivedPage() {
   return (
     <div className="flex flex-col min-h-svh">
       <div className="flex items-center gap-3 px-5 py-3 border-b border-gray-100 sticky top-0 bg-white z-10">
-        <button onClick={() => router.push('/feed')} className="text-xl">←</button>
+        <button onClick={() => window.location.href = '/feed'} className="text-xl">←</button>
         <h1 className="font-bold text-base flex-1 text-center">Archive</h1>
         <div className="w-7" />
       </div>

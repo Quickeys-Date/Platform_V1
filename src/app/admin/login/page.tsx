@@ -1,15 +1,11 @@
 'use client'
 // src/app/admin/login/page.tsx
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import toast from 'react-hot-toast'
 
 export default function AdminLoginPage() {
-  const router = useRouter()
   const [form, setForm] = useState({ email: '', password: '' })
   const [showPass, setShowPass] = useState(false)
-  const [remember, setRemember] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -26,7 +22,12 @@ export default function AdminLoginPage() {
 
     if (authErr) { setError('Invalid admin credentials.'); setLoading(false); return }
 
-    const { data: profile } = await supabase.from('profiles').select('role').eq('id', data.user.id).single()
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', data.user.id)
+      .single()
+
     if (!profile || profile.role !== 'ADMIN') {
       setError('Access denied. Admin credentials required.')
       await supabase.auth.signOut()
@@ -34,7 +35,7 @@ export default function AdminLoginPage() {
       return
     }
 
-    router.push('/admin/dashboard')
+    window.location.href = '/admin/dashboard'
   }
 
   return (
@@ -57,20 +58,16 @@ export default function AdminLoginPage() {
         <form onSubmit={submit} className="space-y-3">
           <div className="relative">
             <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400">✉</span>
-            <input
-              type="email" placeholder="Email"
-              value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))}
-              className="w-full pl-10 pr-4 py-4 border-[1.5px] border-gray-200 rounded-xl text-base"
-            />
+            <input type="email" placeholder="Email" value={form.email}
+              onChange={e => setForm(p => ({ ...p, email: e.target.value }))}
+              className="w-full pl-10 pr-4 py-4 border-[1.5px] border-gray-200 rounded-xl text-base" />
           </div>
 
           <div className="relative">
             <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400">🔒</span>
-            <input
-              type={showPass ? 'text' : 'password'} placeholder="Password"
-              value={form.password} onChange={e => setForm(p => ({ ...p, password: e.target.value }))}
-              className="w-full pl-10 pr-12 py-4 border-[1.5px] border-gray-200 rounded-xl text-base"
-            />
+            <input type={showPass ? 'text' : 'password'} placeholder="Password" value={form.password}
+              onChange={e => setForm(p => ({ ...p, password: e.target.value }))}
+              className="w-full pl-10 pr-12 py-4 border-[1.5px] border-gray-200 rounded-xl text-base" />
             <button type="button" onClick={() => setShowPass(p => !p)}
               className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400">
               {showPass ? '🙈' : '👁'}
@@ -78,14 +75,6 @@ export default function AdminLoginPage() {
           </div>
 
           {error && <p className="text-red-600 text-sm">{error}</p>}
-
-          <div className="flex justify-between items-center">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" checked={remember} onChange={e => setRemember(e.target.checked)} className="accent-black" />
-              <span className="text-sm text-gray-600">Remember me</span>
-            </label>
-            <button type="button" className="text-sm font-semibold text-black">Forgot password?</button>
-          </div>
 
           <div className="pt-1">
             <button type="submit" disabled={loading}

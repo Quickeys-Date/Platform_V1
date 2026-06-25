@@ -67,7 +67,7 @@ export default function AdminDashboardPage() {
     setStats((s: any) => s ? { ...s, reportQueue: s.reportQueue.filter((r: any) => r.id !== reportId) } : s)
   }
 
-  const signOut = async () => { await supabase.auth.signOut(); router.push('/') }
+  const signOut = async () => { await supabase.auth.signOut(); window.location.href = '/' }
 
   const navItems: { id: Tab; icon: string; label: string }[] = [
     { id: 'dashboard', icon: '🏠', label: 'Home' },

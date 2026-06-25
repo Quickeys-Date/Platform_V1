@@ -12,8 +12,7 @@ export interface Profile {
   id: string
   email: string
   first_name: string
-  date_of_birth: string
-  age: number
+  date_of_birth: string | null
   gender: string
   interested_in: string[]
   city: string
@@ -41,7 +40,6 @@ export interface Conversation {
   archived_by: string | null
   last_message_at: string
   created_at: string
-  // Joined fields
   other_profile?: Profile
   last_message?: Message
   unread_count?: number
@@ -53,7 +51,6 @@ export interface Message {
   sender_id: string
   content: string
   created_at: string
-  // Joined
   sender?: Profile
 }
 
@@ -77,7 +74,6 @@ export interface Report {
   source_screen: 'Chat' | 'Connection Profile'
   status: 'PENDING' | 'REVIEWED' | 'DISMISSED'
   created_at: string
-  // Joined
   reporter?: Profile
   reported?: Profile
 }

@@ -1,70 +1,57 @@
 // src/middleware.ts
-import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({ request })
-
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() { return request.cookies.getAll() },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
-          supabaseResponse = NextResponse.next({ request })
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
-          )
-        },
-      },
-    }
-  )
-
-  const { data: { user } } = await supabase.auth.getUser()
-
   const { pathname } = request.nextUrl
 
-  // Public routes - no auth needed
-  const publicRoutes = ['/', '/auth/signin', '/auth/signup', '/auth/verify', '/auth/reset-password']
-  const adminRoutes = pathname.startsWith('/admin')
+  // Always pass through these without any checks
+  if (
+    pathname.startsWith('/_next') ||
+    pathname.startsWith('/api/') ||
+    pathname.includes('.') ||
+    pathname === '/admin/login'
+  ) {
+    return NextResponse.next()
+  }
 
-  // Admin login is public
-  if (pathname === '/admin/login') return supabaseResponse
+  // Cookie name for this Supabase project
+  const cookieName = 'sb-rhystpxkmmkxjxhhamxi-auth-token'
+  const hasSession = !!request.cookies.get(cookieName)?.value
 
-  // Protect admin routes
-  if (adminRoutes) {
-    if (!user) {
+  // Public routes — always accessible
+  const publicRoutes = [
+    '/',
+    '/auth/signin',
+    '/auth/signup',
+    '/auth/verify',
+    '/auth/callback',
+    '/auth/reset-password',
+    '/auth/update-password',
+  ]
+
+  if (publicRoutes.includes(pathname)) {
+    // Only redirect away from landing page if logged in
+    // Keep signin/signup always open so any user can sign in/out
+    if (hasSession && pathname === '/') {
+      return NextResponse.redirect(new URL('/feed', request.url))
+    }
+    return NextResponse.next()
+  }
+
+  // Admin routes
+  if (pathname.startsWith('/admin')) {
+    if (!hasSession) {
       return NextResponse.redirect(new URL('/admin/login', request.url))
     }
-    // Check admin role
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-    if (!profile || profile.role !== 'ADMIN') {
-      return NextResponse.redirect(new URL('/', request.url))
-    }
-    return supabaseResponse
+    return NextResponse.next()
   }
 
-  // Protect app routes
-  const protectedRoutes = ['/feed', '/chat', '/profile', '/me', '/onboarding', '/archived']
-  const isProtected = protectedRoutes.some(r => pathname.startsWith(r))
-
-  if (isProtected && !user) {
-    return NextResponse.redirect(new URL('/', request.url))
+  // All other protected routes
+  if (!hasSession) {
+    return NextResponse.redirect(new URL('/auth/signin', request.url))
   }
 
-  // If logged in and hitting public auth pages, redirect to feed
-  if (user && publicRoutes.includes(pathname)) {
-    return NextResponse.redirect(new URL('/feed', request.url))
-  }
-
-  return supabaseResponse
+  return NextResponse.next()
 }
 
 export const config = {

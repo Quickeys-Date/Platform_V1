@@ -103,7 +103,7 @@ export default function FeedPage() {
                   className="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-xl hover:border-gray-300 transition-colors">
                   <PhotoDisplay photos={(conv.other_profile as any)?.photos || []} size={44} className="rounded-full" />
                   <div className="flex-1 min-w-0">
-                    <div className="font-bold text-sm">{(conv.other_profile as any)?.first_name}, {(conv.other_profile as any)?.age}</div>
+                    <div className="font-bold text-sm">{(conv.other_profile as any)?.first_name}</div>
                     <div className="text-xs text-gray-400 truncate mt-0.5">
                       {conv.last_message ? (conv.last_message as any).content?.slice(0, 45) + '…' : 'Say hello!'}
                     </div>

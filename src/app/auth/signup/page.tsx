@@ -2,10 +2,12 @@
 // src/app/auth/signup/page.tsx
 import { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import toast from 'react-hot-toast'
 
 export default function SignUpPage() {
+  const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [showPass, setShowPass] = useState(false)
   const [form, setForm] = useState({
@@ -55,26 +57,32 @@ export default function SignUpPage() {
       return
     }
 
-    // Create profile via server-side API route using service role key
+    // Create profile manually after signup
     if (data.user) {
-      const res = await fetch('/api/profiles/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          user_id: data.user.id, 
-          email: form.email 
-        }),
+      const { error: profileError } = await supabase.from('profiles').upsert({
+        id: data.user.id,
+        email: form.email,
+        first_name: '',
+        gender: 'Prefer not to say',
+        interested_in: [],
+        city: '',
+        state: '',
+        photos: [],
+        age_range_min: 18,
+        age_range_max: 45,
+        location_radius: '25mi',
+        role: 'USER',
+        status: 'ACTIVE',
+        pax_onboarded: false,
+        profile_complete: false,
       })
 
-      if (!res.ok) {
-        const err = await res.json()
-        console.error('Profile creation failed:', err)
-        // Don't block the user — they can still verify email
-        // Profile will be created on first login if needed
+      if (profileError) {
+        console.error('Profile creation error:', profileError)
       }
     }
 
-    window.location.href = '/auth/verify?email=' + encodeURIComponent(form.email)
+    router.push('/auth/verify?email=' + encodeURIComponent(form.email))
   }
 
   const f = (k: string) => (ev: React.ChangeEvent<HTMLInputElement>) =>
@@ -98,8 +106,13 @@ export default function SignUpPage() {
           <div>
             <div className="relative">
               <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400">✉</span>
-              <input type="email" placeholder="Email address" value={form.email} onChange={f('email')}
-                className="w-full pl-10 pr-4 py-4 border-[1.5px] border-gray-200 rounded-xl text-base focus:border-black" />
+              <input
+                type="email"
+                placeholder="Email address"
+                value={form.email}
+                onChange={f('email')}
+                className="w-full pl-10 pr-4 py-4 border-[1.5px] border-gray-200 rounded-xl text-base focus:border-black"
+              />
             </div>
             {errors.email && <p className="text-red-600 text-sm mt-1">{errors.email}</p>}
           </div>
@@ -107,8 +120,13 @@ export default function SignUpPage() {
           <div>
             <div className="relative">
               <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400">🔒</span>
-              <input type={showPass ? 'text' : 'password'} placeholder="Password" value={form.password} onChange={f('password')}
-                className="w-full pl-10 pr-12 py-4 border-[1.5px] border-gray-200 rounded-xl text-base focus:border-black" />
+              <input
+                type={showPass ? 'text' : 'password'}
+                placeholder="Password"
+                value={form.password}
+                onChange={f('password')}
+                className="w-full pl-10 pr-12 py-4 border-[1.5px] border-gray-200 rounded-xl text-base focus:border-black"
+              />
               <button type="button" onClick={() => setShowPass(p => !p)}
                 className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
                 {showPass ? '🙈' : '👁'}
@@ -120,34 +138,50 @@ export default function SignUpPage() {
           <div>
             <div className="relative">
               <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400">🔒</span>
-              <input type="password" placeholder="Confirm password" value={form.confirm} onChange={f('confirm')}
-                className="w-full pl-10 pr-4 py-4 border-[1.5px] border-gray-200 rounded-xl text-base focus:border-black" />
+              <input
+                type="password"
+                placeholder="Confirm password"
+                value={form.confirm}
+                onChange={f('confirm')}
+                className="w-full pl-10 pr-4 py-4 border-[1.5px] border-gray-200 rounded-xl text-base focus:border-black"
+              />
             </div>
             {errors.confirm && <p className="text-red-600 text-sm mt-1">{errors.confirm}</p>}
           </div>
 
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1.5">Date of birth</label>
-            <input type="date" value={form.dob} onChange={f('dob')}
-              className="w-full px-4 py-4 border-[1.5px] border-gray-200 rounded-xl text-base focus:border-black" />
+            <input
+              type="date"
+              value={form.dob}
+              onChange={f('dob')}
+              className="w-full px-4 py-4 border-[1.5px] border-gray-200 rounded-xl text-base focus:border-black"
+            />
             {errors.dob && <p className="text-red-600 text-sm mt-1">{errors.dob}</p>}
           </div>
 
           <div>
             <label className="flex items-center gap-3 cursor-pointer">
-              <input type="checkbox" checked={form.terms}
+              <input
+                type="checkbox"
+                checked={form.terms}
                 onChange={e => setForm(p => ({ ...p, terms: e.target.checked }))}
-                className="accent-black" />
+                className="w-4.5 h-4.5 accent-black"
+              />
               <span className="text-sm text-gray-600">
-                I agree to the <span className="text-black font-semibold underline">Terms of Service</span>
+                I agree to the{' '}
+                <span className="text-black font-semibold underline">Terms of Service</span>
               </span>
             </label>
             {errors.terms && <p className="text-red-600 text-sm mt-1">{errors.terms}</p>}
           </div>
 
           <div className="pt-2">
-            <button type="submit" disabled={loading}
-              className="w-full bg-black text-white py-4 rounded-xl font-semibold text-base disabled:opacity-40">
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-black text-white py-4 rounded-xl font-semibold text-base disabled:opacity-40 hover:opacity-90 transition-opacity"
+            >
               {loading ? 'Creating account…' : 'Create Account'}
             </button>
           </div>

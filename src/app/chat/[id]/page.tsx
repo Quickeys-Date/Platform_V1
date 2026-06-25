@@ -114,7 +114,7 @@ export default function ChatPage() {
           <>
             <PhotoDisplay photos={other.photos || []} size={36} className="rounded-full" />
             <div className="flex-1 min-w-0">
-              <div className="font-bold text-sm">{other.first_name}, {other.age}</div>
+              <div className="font-bold text-sm">{other.first_name}{other.date_of_birth ? `, ${Math.floor((Date.now() - new Date(other.date_of_birth).getTime()) / (365.25 * 24 * 3600000))}` : ''}</div>
               <div className="text-xs text-gray-400">{other.city}, {other.state}</div>
             </div>
           </>

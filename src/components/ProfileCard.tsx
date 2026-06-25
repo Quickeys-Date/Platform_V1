@@ -22,7 +22,7 @@ export function ProfileCard({
           <PhotoDisplay photos={profile.photos} fill className="object-cover" />
         </div>
         <div className="p-2.5">
-          <div className="font-bold text-sm tracking-tight">{profile.first_name}, {profile.age}</div>
+          <div className="font-bold text-sm tracking-tight">{profile.first_name}{profile.date_of_birth ? `, ${Math.floor((Date.now() - new Date(profile.date_of_birth).getTime()) / (365.25 * 24 * 3600000))}` : ''}</div>
           <div className="text-xs text-gray-500 mt-0.5">{profile.city}, {profile.state}</div>
           {profile.bio && (
             <div className="text-xs text-gray-400 mt-1 leading-relaxed">

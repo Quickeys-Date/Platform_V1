@@ -1,10 +1,8 @@
-// src/app/api/conversations/route.ts
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClientFromRequest } from '@/lib/supabase/server'
 
-// GET /api/conversations — list user's conversations, sorted correctly per spec
 export async function GET(req: NextRequest) {
-  const supabase = createClient()
+  const supabase = createClientFromRequest(req)
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
@@ -12,15 +10,10 @@ export async function GET(req: NextRequest) {
 
   let query = supabase
     .from('conversations')
-    .select(`
-      *,
-      initiator:profiles!conversations_initiator_id_fkey(id, first_name, age, city, state, photos, bio),
-      recipient:profiles!conversations_recipient_id_fkey(id, first_name, age, city, state, photos, bio)
-    `)
+    .select(`*, initiator:profiles!conversations_initiator_id_fkey(id, first_name, date_of_birth, city, state, photos, bio), recipient:profiles!conversations_recipient_id_fkey(id, first_name, date_of_birth, city, state, photos, bio)`)
     .or(`initiator_id.eq.${user.id},recipient_id.eq.${user.id}`)
     .eq('status', status)
 
-  // S-17: archived sorted by date closed, most recent first
   if (status === 'archived') {
     query = query.order('archived_at', { ascending: false })
   } else {
@@ -38,9 +31,8 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ conversations: convs })
 }
 
-// POST /api/conversations — start a conversation
 export async function POST(req: NextRequest) {
-  const supabase = createClient()
+  const supabase = createClientFromRequest(req)
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
@@ -48,7 +40,6 @@ export async function POST(req: NextRequest) {
   if (!recipient_id) return NextResponse.json({ error: 'recipient_id required' }, { status: 400 })
   if (recipient_id === user.id) return NextResponse.json({ error: 'Cannot start conversation with yourself' }, { status: 400 })
 
-  // Check if conversation already exists (either direction)
   const { data: existing } = await supabase
     .from('conversations')
     .select('id, status')

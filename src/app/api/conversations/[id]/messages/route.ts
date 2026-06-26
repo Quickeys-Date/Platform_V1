@@ -1,10 +1,8 @@
-// src/app/api/conversations/[id]/messages/route.ts
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClientFromRequest } from '@/lib/supabase/server'
 
-// GET messages
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
-  const supabase = createClient()
+  const supabase = createClientFromRequest(req)
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
@@ -28,16 +26,14 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   return NextResponse.json({ messages })
 }
 
-// POST send message
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
-  const supabase = createClient()
+  const supabase = createClientFromRequest(req)
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { content } = await req.json()
   if (!content?.trim()) return NextResponse.json({ error: 'Content required' }, { status: 400 })
 
-  // Verify participant and active status
   const { data: conv } = await supabase
     .from('conversations')
     .select('initiator_id, recipient_id, status')

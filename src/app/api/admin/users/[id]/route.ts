@@ -1,42 +1,33 @@
-// src/app/api/admin/users/[id]/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
-  const supabase = createClient()
+  const supabase = await createClient()
   const admin = createAdminClient()
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { data: adminProfile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-  if (!adminProfile || adminProfile.role !== 'ADMIN') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  if (!profile || profile.role !== 'ADMIN') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-  const { action, notes } = await req.json()
-  const validActions = ['SUSPEND', 'RESTORE', 'DEACTIVATE', 'REMOVE_PHOTO', 'EXPORT_DATA']
-
-  if (!validActions.includes(action)) return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
-
-  let updateData: Record<string, string> = {}
-  if (action === 'SUSPEND') updateData.status = 'SUSPENDED'
-  else if (action === 'RESTORE') updateData.status = 'ACTIVE'
-  else if (action === 'DEACTIVATE') updateData.status = 'DEACTIVATED'
-
-  if (Object.keys(updateData).length > 0) {
-    await admin.from('profiles').update(updateData).eq('id', params.id)
-  }
+  const { action } = await req.json()
 
   if (action === 'EXPORT_DATA') {
     const { data: userData } = await admin.from('profiles').select('*').eq('id', params.id).single()
-    const { data: userMessages } = await admin.from('messages').select('*').eq('sender_id', params.id)
-    const { data: userTriggers } = await admin.from('pax_triggers').select('*').eq('user_id', params.id)
-    // Log the action
-    await admin.from('admin_actions').insert({ admin_id: user.id, action, target_user_id: params.id, notes })
-    return NextResponse.json({ profile: userData, messages: userMessages, pax_triggers: userTriggers })
+    const { data: convData } = await admin.from('conversations').select('*').or(`initiator_id.eq.${params.id},recipient_id.eq.${params.id}`)
+    const { data: msgData } = await admin.from('messages').select('*').eq('sender_id', params.id)
+    await admin.from('admin_actions').insert({ admin_id: user.id, action: 'EXPORT_DATA', target_user_id: params.id })
+    return NextResponse.json({ profile: userData, conversations: convData, messages: msgData })
   }
 
-  // Log action
-  await admin.from('admin_actions').insert({ admin_id: user.id, action, target_user_id: params.id, notes })
+  const validActions = ['SUSPEND', 'RESTORE', 'DEACTIVATE']
+  if (!validActions.includes(action)) return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
 
-  return NextResponse.json({ success: true, action })
+  const statusMap: Record<string, string> = { SUSPEND: 'SUSPENDED', RESTORE: 'ACTIVE', DEACTIVATE: 'DEACTIVATED' }
+  const { error } = await admin.from('profiles').update({ status: statusMap[action] }).eq('id', params.id)
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  await admin.from('admin_actions').insert({ admin_id: user.id, action, target_user_id: params.id })
+  return NextResponse.json({ success: true })
 }

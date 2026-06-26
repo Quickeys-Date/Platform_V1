@@ -3,7 +3,7 @@ import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import { type NextRequest } from 'next/server'
 
-// For Server Components and Server Actions
+// For Server Components
 export function createClient() {
   const cookieStore = cookies()
   return createServerClient(
@@ -24,21 +24,41 @@ export function createClient() {
   )
 }
 
-// For API Route Handlers — reads auth token from request cookies directly
+// For API Route Handlers — extracts JWT from cookie and uses it directly
 export function createClientFromRequest(request: NextRequest) {
-  return createServerClient(
+  // Find the auth cookie
+  const authCookieName = `sb-${process.env.NEXT_PUBLIC_SUPABASE_URL!.split('//')[1].split('.')[0]}-auth-token`
+  const cookieValue = request.cookies.get(authCookieName)?.value
+
+  let accessToken: string | undefined
+
+  if (cookieValue) {
+    try {
+      const decoded = decodeURIComponent(cookieValue)
+      const parsed = JSON.parse(decoded)
+      accessToken = parsed.access_token
+    } catch {}
+  }
+
+  // Create client with the access token
+  const client = createSupabaseClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
-      cookies: {
-        getAll() { return request.cookies.getAll() },
-        setAll() {},
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+      global: {
+        headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
       },
     }
   )
+
+  return client
 }
 
-// Admin client — uses service role key, bypasses RLS
+// Admin client — bypasses RLS
 export function createAdminClient() {
   return createSupabaseClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

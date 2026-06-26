@@ -1,11 +1,30 @@
 // src/lib/api.ts
-// Client-side fetch wrapper that sends auth token in Authorization header
-'use client'
-import { createClient } from '@/lib/supabase/client'
+// Reads JWT directly from cookie and sends as Authorization header
+
+function getAccessTokenFromCookie(): string | null {
+  try {
+    const cookies = document.cookie.split(';')
+    const authCookie = cookies.find(c => c.trim().includes('sb-') && c.includes('auth-token'))
+    if (!authCookie) return null
+
+    const value = authCookie.split('=').slice(1).join('=').trim()
+    
+    let jsonStr: string
+    if (value.startsWith('base64-')) {
+      jsonStr = atob(value.slice(7))
+    } else {
+      jsonStr = decodeURIComponent(value)
+    }
+
+    const parsed = JSON.parse(jsonStr)
+    return parsed.access_token || null
+  } catch {
+    return null
+  }
+}
 
 export async function apiFetch(url: string, options: RequestInit = {}): Promise<Response> {
-  const supabase = createClient()
-  const { data: { session } } = await supabase.auth.getSession()
+  const token = getAccessTokenFromCookie()
 
   const headers: Record<string, string> = {
     ...(options.headers as Record<string, string> || {}),
@@ -15,8 +34,8 @@ export async function apiFetch(url: string, options: RequestInit = {}): Promise<
     headers['Content-Type'] = 'application/json'
   }
 
-  if (session?.access_token) {
-    headers['Authorization'] = `Bearer ${session.access_token}`
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`
   }
 
   return fetch(url, { ...options, headers })

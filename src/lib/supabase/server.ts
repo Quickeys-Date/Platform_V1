@@ -3,7 +3,6 @@ import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import { type NextRequest } from 'next/server'
 
-// For Server Components
 export function createClient() {
   const cookieStore = cookies()
   return createServerClient(
@@ -26,23 +25,25 @@ export function createClient() {
 
 function extractAccessToken(cookieValue: string): string | undefined {
   try {
-    // Handle base64- prefix (new Supabase format)
+    let jsonStr: string
+
     if (cookieValue.startsWith('base64-')) {
-      const base64 = cookieValue.slice(7)
-      const decoded = Buffer.from(base64, 'base64').toString('utf-8')
-      const parsed = JSON.parse(decoded)
-      return parsed.access_token
+      // New Supabase format: base64-{base64EncodedJSON}
+      const b64 = cookieValue.slice(7)
+      // Use atob which works in both Node.js and Edge runtime
+      jsonStr = atob(b64)
+    } else {
+      // Old format: URL-encoded JSON
+      jsonStr = decodeURIComponent(cookieValue)
     }
-    // Handle URL-encoded JSON (old format)
-    const decoded = decodeURIComponent(cookieValue)
-    const parsed = JSON.parse(decoded)
+
+    const parsed = JSON.parse(jsonStr)
     return parsed.access_token
   } catch {
     return undefined
   }
 }
 
-// For API Route Handlers
 export function createClientFromRequest(request: NextRequest) {
   const projectRef = process.env.NEXT_PUBLIC_SUPABASE_URL!.split('//')[1].split('.')[0]
   const authCookieName = `sb-${projectRef}-auth-token`
@@ -68,7 +69,6 @@ export function createClientFromRequest(request: NextRequest) {
   )
 }
 
-// Admin client
 export function createAdminClient() {
   return createSupabaseClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

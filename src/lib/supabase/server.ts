@@ -24,24 +24,36 @@ export function createClient() {
   )
 }
 
-// For API Route Handlers — extracts JWT from cookie and uses it directly
+function extractAccessToken(cookieValue: string): string | undefined {
+  try {
+    // Handle base64- prefix (new Supabase format)
+    if (cookieValue.startsWith('base64-')) {
+      const base64 = cookieValue.slice(7)
+      const decoded = Buffer.from(base64, 'base64').toString('utf-8')
+      const parsed = JSON.parse(decoded)
+      return parsed.access_token
+    }
+    // Handle URL-encoded JSON (old format)
+    const decoded = decodeURIComponent(cookieValue)
+    const parsed = JSON.parse(decoded)
+    return parsed.access_token
+  } catch {
+    return undefined
+  }
+}
+
+// For API Route Handlers
 export function createClientFromRequest(request: NextRequest) {
-  // Find the auth cookie
-  const authCookieName = `sb-${process.env.NEXT_PUBLIC_SUPABASE_URL!.split('//')[1].split('.')[0]}-auth-token`
+  const projectRef = process.env.NEXT_PUBLIC_SUPABASE_URL!.split('//')[1].split('.')[0]
+  const authCookieName = `sb-${projectRef}-auth-token`
   const cookieValue = request.cookies.get(authCookieName)?.value
 
   let accessToken: string | undefined
-
   if (cookieValue) {
-    try {
-      const decoded = decodeURIComponent(cookieValue)
-      const parsed = JSON.parse(decoded)
-      accessToken = parsed.access_token
-    } catch {}
+    accessToken = extractAccessToken(cookieValue)
   }
 
-  // Create client with the access token
-  const client = createSupabaseClient(
+  return createSupabaseClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
@@ -54,11 +66,9 @@ export function createClientFromRequest(request: NextRequest) {
       },
     }
   )
-
-  return client
 }
 
-// Admin client — bypasses RLS
+// Admin client
 export function createAdminClient() {
   return createSupabaseClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

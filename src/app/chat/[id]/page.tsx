@@ -4,6 +4,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { Message, Conversation } from '@/lib/types'
 import { CloseConversationModal } from '@/components/CloseConversationModal'
+import { apiFetch } from '@/lib/api'
 import toast from 'react-hot-toast'
 
 function getAge(dob: string | null | undefined): string {
@@ -35,13 +36,13 @@ export default function ChatPage() {
     setUserId(user.id)
 
     for (const status of ['active', 'archived']) {
-      const res = await fetch(`/api/conversations?status=${status}`)
+      const res = await apiFetch(`/api/conversations?status=${status}`)
       const data = await res.json()
       const found = data.conversations?.find((c: Conversation) => c.id === id)
       if (found) { setConv(found); break }
     }
 
-    const msgRes = await fetch(`/api/conversations/${id}/messages`)
+    const msgRes = await apiFetch(`/api/conversations/${id}/messages`)
     const msgData = await msgRes.json()
     const msgs = msgData.messages || []
     setMessages(msgs)
@@ -78,9 +79,8 @@ export default function ChatPage() {
     setSending(true)
     const content = text.trim()
     setText('')
-    const res = await fetch(`/api/conversations/${id}/messages`, {
+    const res = await apiFetch(`/api/conversations/${id}/messages`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ content }),
     })
     if (!res.ok) {
@@ -93,7 +93,7 @@ export default function ChatPage() {
   }
 
   const closeConversation = async () => {
-    const res = await fetch(`/api/conversations/${id}/close`, { method: 'POST' })
+    const res = await apiFetch(`/api/conversations/${id}/close`, { method: 'POST' })
     const data = await res.json()
     if (!res.ok) { toast.error('Failed to close'); return }
     const triggerId = data.pax_trigger_id || ''

@@ -1,9 +1,8 @@
 'use client'
-// src/app/pax/checkin/page.tsx — S-13 Emotional Check-In
-// Handles both CLOSE_CONVERSATION (trigger_id in URL) and INACTIVITY (triggers list + index in URL).
 import { useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { EMOTION_OPTIONS } from '@/lib/pax'
+import { apiFetch } from '@/lib/api'
 
 function CheckinContent() {
   const router = useRouter()
@@ -13,9 +12,6 @@ function CheckinContent() {
 
   const triggerType = params.get('type') || 'CLOSE_CONVERSATION'
   const isInactivity = triggerType === 'INACTIVITY'
-
-  // For CLOSE_CONVERSATION: single trigger_id in URL
-  // For INACTIVITY: comma-separated list + current index
   const singleTriggerId = params.get('trigger_id') || ''
   const triggersParam = params.get('triggers') || ''
   const indexParam = parseInt(params.get('index') || '0', 10)
@@ -27,9 +23,8 @@ function CheckinContent() {
     setSaving(true)
 
     if (currentTriggerId) {
-      await fetch('/api/pax', {
+      await apiFetch('/api/pax', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ trigger_id: currentTriggerId, state_id_selected: selected }),
       })
     }

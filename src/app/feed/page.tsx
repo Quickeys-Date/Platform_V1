@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import type { Profile, Conversation } from '@/lib/types'
 import { BottomNav } from '@/components/BottomNav'
 import { ProfileCard } from '@/components/ProfileCard'
-import { PhotoDisplay } from '@/components/PhotoDisplay'
+import { apiFetch } from '@/lib/api'
 
 type LoadState = 'checking' | 'ready' | 'redirecting'
 
@@ -18,7 +18,7 @@ export default function FeedPage() {
   useEffect(() => {
     const checkInactivity = async () => {
       try {
-        const res = await fetch('/api/pax')
+        const res = await apiFetch('/api/pax')
         const data = await res.json()
         const pending = data.triggers || []
         if (pending.length > 0) {
@@ -36,8 +36,8 @@ export default function FeedPage() {
   const loadFeed = useCallback(async () => {
     setFeedLoading(true)
     const [convRes, feedRes] = await Promise.all([
-      fetch('/api/conversations?status=active'),
-      fetch('/api/profiles/feed'),
+      apiFetch('/api/conversations?status=active'),
+      apiFetch('/api/profiles/feed'),
     ])
     const [convData, feedData] = await Promise.all([convRes.json(), feedRes.json()])
     setActiveConvs(convData.conversations || [])
@@ -50,9 +50,8 @@ export default function FeedPage() {
   }, [loadState, loadFeed])
 
   const startConversation = async (profileId: string) => {
-    const res = await fetch('/api/conversations', {
+    const res = await apiFetch('/api/conversations', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ recipient_id: profileId }),
     })
     const data = await res.json()

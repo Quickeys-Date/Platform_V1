@@ -1,6 +1,7 @@
 'use client'
+// src/app/feed/page.tsx — S-09 Connection Feed
+// CR#6: Tap user card in active conversations to open profile (separate from chat)
 import { useEffect, useState, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
 import type { Profile, Conversation } from '@/lib/types'
 import { BottomNav } from '@/components/BottomNav'
 import { ProfileCard } from '@/components/ProfileCard'
@@ -9,7 +10,6 @@ import { apiFetch } from '@/lib/api'
 type LoadState = 'checking' | 'ready' | 'redirecting'
 
 export default function FeedPage() {
-  const router = useRouter()
   const [loadState, setLoadState] = useState<LoadState>('checking')
   const [profiles, setProfiles] = useState<Profile[]>([])
   const [activeConvs, setActiveConvs] = useState<Conversation[]>([])
@@ -80,21 +80,33 @@ export default function FeedPage() {
           <div className="mb-5">
             <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Active conversations</h2>
             <div className="space-y-2">
-              {activeConvs.map(conv => (
-                <button key={conv.id} onClick={() => window.location.href = `/chat/${conv.id}`}
-                  className="w-full flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-xl hover:border-gray-300 transition-colors text-left">
-                  <div className="w-11 h-11 rounded-full bg-gray-100 flex items-center justify-center text-sm font-bold flex-shrink-0">
-                    {(conv.other_profile as any)?.first_name?.[0] || '?'}
+              {activeConvs.map(conv => {
+                const other = conv.other_profile as any
+                return (
+                  <div key={conv.id} className="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-xl hover:border-gray-300 transition-colors">
+                    {/* CR#6: Tap photo/name to view profile */}
+                    <button
+                      onClick={() => window.location.href = `/profile/${other?.id}`}
+                      className="flex items-center gap-3 flex-1 min-w-0 text-left">
+                      <div className="w-11 h-11 rounded-full bg-gray-100 flex items-center justify-center text-sm font-bold flex-shrink-0">
+                        {other?.first_name?.[0] || '?'}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-bold text-sm">{other?.first_name}</div>
+                        <div className="text-xs text-gray-400 truncate mt-0.5">
+                          {conv.last_message ? (conv.last_message as any).content?.slice(0, 45) + '…' : 'Say hello!'}
+                        </div>
+                      </div>
+                    </button>
+                    {/* Separate button to open chat */}
+                    <button
+                      onClick={() => window.location.href = `/chat/${conv.id}`}
+                      className="flex-shrink-0 w-8 h-8 flex items-center justify-center bg-black text-white rounded-full text-xs">
+                      💬
+                    </button>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-bold text-sm">{(conv.other_profile as any)?.first_name}</div>
-                    <div className="text-xs text-gray-400 truncate mt-0.5">
-                      {conv.last_message ? (conv.last_message as any).content?.slice(0, 45) + '…' : 'Say hello!'}
-                    </div>
-                  </div>
-                  <span className="text-gray-300">→</span>
-                </button>
-              ))}
+                )
+              })}
             </div>
           </div>
         )}

@@ -1,9 +1,14 @@
 'use client'
+// src/app/chat/[id]/page.tsx — S-11 Chat
+// CR#1: Archive vs Unmatch as separate actions
+// CR#3: Profile stays accessible after archive
+// CR#4: WebSocket real-time messages
+// CR#5: Tap name/photo to open profile
 import { useEffect, useState, useRef, useCallback } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { Message, Conversation } from '@/lib/types'
-import { CloseConversationModal } from '@/components/CloseConversationModal'
+import { CloseConversationModal, UnmatchConfirmModal } from '@/components/CloseConversationModal'
 import { apiFetch } from '@/lib/api'
 import toast from 'react-hot-toast'
 
@@ -15,14 +20,14 @@ function getAge(dob: string | null | undefined): string {
 
 export default function ChatPage() {
   const { id } = useParams<{ id: string }>()
-  const router = useRouter()
   const supabase = createClient()
 
   const [conv, setConv] = useState<Conversation | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
   const [text, setText] = useState('')
   const [sending, setSending] = useState(false)
-  const [showClose, setShowClose] = useState(false)
+  const [showOptions, setShowOptions] = useState(false)
+  const [showUnmatchConfirm, setShowUnmatchConfirm] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
   const [lastMsgAge, setLastMsgAge] = useState<number>(0)
   const endRef = useRef<HTMLDivElement>(null)
@@ -55,6 +60,7 @@ export default function ChatPage() {
 
   useEffect(() => { loadData() }, [loadData])
 
+  // CR#4: WebSocket real-time — messages appear immediately without refresh
   useEffect(() => {
     const channel = supabase
       .channel(`messages:${id}`)
@@ -92,10 +98,22 @@ export default function ChatPage() {
     inputRef.current?.focus()
   }
 
-  const closeConversation = async () => {
+  // CR#1: Archive — keeps profile accessible, read-only chat
+  const archiveConversation = async () => {
+    setShowOptions(false)
     const res = await apiFetch(`/api/conversations/${id}/close`, { method: 'POST' })
     const data = await res.json()
-    if (!res.ok) { toast.error('Failed to close'); return }
+    if (!res.ok) { toast.error('Failed to archive'); return }
+    const triggerId = data.pax_trigger_id || ''
+    window.location.href = `/pax/checkin?trigger_id=${triggerId}&type=CLOSE_CONVERSATION`
+  }
+
+  // CR#1: Unmatch — permanent, triggers confirmation first
+  const unmatchConversation = async () => {
+    setShowUnmatchConfirm(false)
+    const res = await apiFetch(`/api/conversations/${id}/unmatch`, { method: 'POST' })
+    const data = await res.json()
+    if (!res.ok) { toast.error('Failed to unmatch'); return }
     const triggerId = data.pax_trigger_id || ''
     window.location.href = `/pax/checkin?trigger_id=${triggerId}&type=CLOSE_CONVERSATION`
   }
@@ -106,43 +124,52 @@ export default function ChatPage() {
 
   return (
     <div className="flex flex-col h-svh">
+      {/* Header — CR#5: tap name/photo to view profile */}
       <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 bg-white sticky top-0 z-10 flex-shrink-0">
         <button onClick={() => window.location.href = '/feed'} className="text-xl p-1">←</button>
         {other && (
-          <>
-            <div className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-sm font-bold flex-shrink-0">
+          /* CR#5: entire name+photo area is tappable to open profile */
+          <button
+            onClick={() => window.location.href = `/profile/${other.id}`}
+            className="flex items-center gap-2.5 flex-1 min-w-0 text-left"
+          >
+            <div className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-sm font-bold flex-shrink-0 overflow-hidden">
               {other.first_name?.[0] || '?'}
             </div>
             <div className="flex-1 min-w-0">
               <div className="font-bold text-sm">{other.first_name}{getAge(other.date_of_birth)}</div>
-              <div className="text-xs text-gray-400">{other.city}, {other.state}</div>
+              <div className="text-xs text-gray-400">{other.city}, {other.state} · Tap to view profile</div>
             </div>
-          </>
+          </button>
         )}
-        {!isArchived && (
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <button onClick={() => setShowClose(true)}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {!isArchived && (
+            <button
+              onClick={() => setShowOptions(true)}
               className="flex items-center gap-1.5 px-3 py-1.5 border-[1.5px] rounded-full text-xs font-bold"
               style={{ borderColor: '#C9A84C', color: '#C9A84C' }}>
-              ✕ Close
+              ⋯ Options
             </button>
-            <button onClick={() => window.location.href = `/report?reported_id=${other?.id}&source=Chat`}
-              className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded-full text-gray-500">
-              ⚑
-            </button>
-          </div>
-        )}
+          )}
+          <button
+            onClick={() => window.location.href = `/report?reported_id=${other?.id}&source=Chat`}
+            className="w-7 h-7 flex items-center justify-center text-gray-400 text-sm">
+            ⚑
+          </button>
+        </div>
         {isArchived && (
           <span className="text-xs text-gray-400 font-medium px-2 py-1 bg-gray-100 rounded-full">Archived</span>
         )}
       </div>
 
+      {/* 48h indicator */}
       {show48hIndicator && (
         <div className="px-4 py-2 text-center text-xs text-gray-400 bg-gray-50 border-b border-gray-100">
           No messages in a while — say hello?
         </div>
       )}
 
+      {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-2">
         {messages.length === 0 && (
           <div className="text-center py-12 text-gray-400">
@@ -166,6 +193,7 @@ export default function ChatPage() {
         <div ref={endRef} />
       </div>
 
+      {/* Input */}
       {!isArchived ? (
         <div className="border-t border-gray-200 px-4 py-3 pb-safe flex gap-3 items-end bg-white flex-shrink-0">
           <textarea
@@ -183,13 +211,34 @@ export default function ChatPage() {
           </button>
         </div>
       ) : (
-        <div className="border-t border-gray-100 px-4 py-4 text-center text-sm text-gray-400 bg-white flex-shrink-0">
-          This conversation is archived and read-only.
+        <div className="border-t border-gray-100 px-4 py-4 text-center flex-shrink-0 bg-white">
+          <p className="text-sm text-gray-400 mb-3">This conversation is archived and read-only.</p>
+          {/* CR#3: Profile still accessible from archived chat */}
+          {other && (
+            <button
+              onClick={() => window.location.href = `/profile/${other.id}`}
+              className="text-sm font-semibold text-black underline">
+              View {other.first_name}'s profile
+            </button>
+          )}
         </div>
       )}
 
-      {showClose && (
-        <CloseConversationModal onConfirm={closeConversation} onCancel={() => setShowClose(false)} />
+      {/* CR#1 & CR#2: Options modal */}
+      {showOptions && (
+        <CloseConversationModal
+          onArchive={archiveConversation}
+          onUnmatch={() => { setShowOptions(false); setShowUnmatchConfirm(true) }}
+          onCancel={() => setShowOptions(false)}
+        />
+      )}
+
+      {/* CR#2: Unmatch confirmation */}
+      {showUnmatchConfirm && (
+        <UnmatchConfirmModal
+          onConfirm={unmatchConversation}
+          onCancel={() => setShowUnmatchConfirm(false)}
+        />
       )}
     </div>
   )

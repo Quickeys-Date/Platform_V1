@@ -1,11 +1,10 @@
 'use client'
-// src/app/feed/page.tsx — S-09 Connection Feed
-// CR#6: Tap user card in active conversations to open profile (separate from chat)
 import { useEffect, useState, useCallback } from 'react'
 import type { Profile, Conversation } from '@/lib/types'
 import { BottomNav } from '@/components/BottomNav'
 import { ProfileCard } from '@/components/ProfileCard'
 import { apiFetch } from '@/lib/api'
+import { QuicKeysLogo } from '@/components/QuicKeysLogo'
 
 type LoadState = 'checking' | 'ready' | 'redirecting'
 
@@ -45,9 +44,7 @@ export default function FeedPage() {
     setFeedLoading(false)
   }, [])
 
-  useEffect(() => {
-    if (loadState === 'ready') loadFeed()
-  }, [loadState, loadFeed])
+  useEffect(() => { if (loadState === 'ready') loadFeed() }, [loadState, loadFeed])
 
   const startConversation = async (profileId: string) => {
     const res = await apiFetch('/api/conversations', {
@@ -60,48 +57,66 @@ export default function FeedPage() {
 
   if (loadState === 'checking' || loadState === 'redirecting') {
     return (
-      <div className="flex items-center justify-center min-h-svh bg-white">
-        <div className="w-6 h-6 border-2 border-black border-t-transparent rounded-full animate-spin" />
+      <div className="flex items-center justify-center min-h-svh" style={{ background: '#0A0A0A' }}>
+        <div style={{ width: 24, height: 24, border: '2px solid #0FB7BF', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
       </div>
     )
   }
 
   return (
-    <div className="flex flex-col min-h-svh">
-      <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 sticky top-0 bg-white z-10">
-        <span className="text-2xl font-black tracking-[-1.5px]">QuicKeys</span>
-        <button onClick={() => window.location.href = '/me'} className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-gray-100">
-          <span className="text-lg">👤</span>
+    <div className="flex flex-col min-h-svh" style={{ background: '#0A0A0A' }}>
+      {/* Header */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '12px 20px',
+        borderBottom: '1px solid rgba(15, 183, 191, 0.1)',
+        background: 'rgba(6, 27, 30, 0.8)',
+        backdropFilter: 'blur(20px)',
+        position: 'sticky', top: 0, zIndex: 10,
+      }}>
+        <QuicKeysLogo size="sm" showWordmark />
+        <button onClick={() => window.location.href = '/me'}
+          style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(15, 183, 191, 0.1)', border: '1px solid rgba(15, 183, 191, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0FB7BF', fontSize: 16 }}>
+          ◎
         </button>
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 py-4 pb-24">
+        {/* Active conversations */}
         {activeConvs.length > 0 && (
           <div className="mb-5">
-            <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Active conversations</h2>
+            <h2 style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>
+              Active conversations
+            </h2>
             <div className="space-y-2">
               {activeConvs.map(conv => {
                 const other = conv.other_profile as any
                 return (
-                  <div key={conv.id} className="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-xl hover:border-gray-300 transition-colors">
-                    {/* CR#6: Tap photo/name to view profile */}
-                    <button
-                      onClick={() => window.location.href = `/profile/${other?.id}`}
+                  <div key={conv.id} style={{
+                    display: 'flex', alignItems: 'center', gap: 12, padding: 12,
+                    background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(15,183,191,0.15)',
+                    borderRadius: 14,
+                  }}>
+                    <button onClick={() => window.location.href = `/profile/${other?.id}`}
                       className="flex items-center gap-3 flex-1 min-w-0 text-left">
-                      <div className="w-11 h-11 rounded-full bg-gray-100 flex items-center justify-center text-sm font-bold flex-shrink-0">
+                      <div style={{
+                        width: 44, height: 44, borderRadius: '50%',
+                        background: 'linear-gradient(135deg, #043538, #0A6469)',
+                        border: '1.5px solid rgba(15,183,191,0.3)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 16, fontWeight: 700, color: '#0FB7BF', flexShrink: 0,
+                      }}>
                         {other?.first_name?.[0] || '?'}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="font-bold text-sm">{other?.first_name}</div>
-                        <div className="text-xs text-gray-400 truncate mt-0.5">
-                          {conv.last_message ? (conv.last_message as any).content?.slice(0, 45) + '…' : 'Say hello!'}
+                        <div style={{ fontWeight: 600, fontSize: 14, color: 'white' }}>{other?.first_name}</div>
+                        <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', marginTop: 2 }} className="truncate">
+                          {conv.last_message ? (conv.last_message as any).content?.slice(0, 40) + '…' : 'Say hello!'}
                         </div>
                       </div>
                     </button>
-                    {/* Separate button to open chat */}
-                    <button
-                      onClick={() => window.location.href = `/chat/${conv.id}`}
-                      className="flex-shrink-0 w-8 h-8 flex items-center justify-center bg-black text-white rounded-full text-xs">
+                    <button onClick={() => window.location.href = `/chat/${conv.id}`}
+                      style={{ width: 34, height: 34, borderRadius: '50%', background: 'rgba(15,183,191,0.15)', border: '1px solid rgba(15,183,191,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, flexShrink: 0 }}>
                       💬
                     </button>
                   </div>
@@ -111,27 +126,32 @@ export default function FeedPage() {
           </div>
         )}
 
-        <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">New connections</h2>
+        <h2 style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 12 }}>
+          New connections
+        </h2>
 
         {feedLoading ? (
           <div className="grid grid-cols-2 gap-3">
             {[1,2,3,4].map(i => (
-              <div key={i} className="rounded-xl bg-gray-100 animate-pulse" style={{ aspectRatio: '1' }} />
+              <div key={i} style={{ borderRadius: 16, background: 'rgba(255,255,255,0.04)', aspectRatio: '1', animation: 'pulse 1.5s infinite' }} />
             ))}
           </div>
         ) : profiles.length === 0 ? (
-          <div className="text-center py-16">
-            <div className="text-5xl mb-4">🌐</div>
-            <h3 className="font-bold text-lg mb-2">No connections available right now.</h3>
-            <p className="text-gray-400 text-sm mb-4">Check back soon.</p>
-            <button onClick={() => window.location.href = '/me'} className="text-sm font-semibold text-black underline">
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <div style={{ fontSize: 48, marginBottom: 16 }}>🌐</div>
+            <h3 style={{ fontWeight: 700, fontSize: 18, color: 'white', marginBottom: 8 }}>No connections available right now.</h3>
+            <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 14, marginBottom: 16 }}>Check back soon.</p>
+            <button onClick={() => window.location.href = '/me'}
+              style={{ color: '#FFC766', fontSize: 13, fontWeight: 600, textDecoration: 'underline' }}>
               Expand your filters
             </button>
           </div>
         ) : (
           <>
             {profiles.length < 5 && (
-              <p className="text-xs text-gray-400 mb-3 text-center">More connections coming soon.</p>
+              <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.25)', textAlign: 'center', marginBottom: 12 }}>
+                More connections coming soon.
+              </p>
             )}
             <div className="grid grid-cols-2 gap-3">
               {profiles.map(profile => (

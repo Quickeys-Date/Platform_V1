@@ -1,18 +1,14 @@
 'use client'
-// src/app/auth/signup/page.tsx
 import { useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { QuicKeysLogo } from '@/components/QuicKeysLogo'
 import toast from 'react-hot-toast'
 
 export default function SignUpPage() {
-  const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [showPass, setShowPass] = useState(false)
-  const [form, setForm] = useState({
-    email: '', password: '', confirm: '', dob: '', terms: false
-  })
+  const [form, setForm] = useState({ email: '', password: '', confirm: '', dob: '', terms: false })
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   const validate = () => {
@@ -42,13 +38,11 @@ export default function SignUpPage() {
     const { data, error } = await supabase.auth.signUp({
       email: form.email,
       password: form.password,
-      options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
-      }
+      options: { emailRedirectTo: `${window.location.origin}/auth/callback` }
     })
 
     if (error) {
-      if (error.message.includes('already registered') || error.message.includes('already been registered')) {
+      if (error.message.includes('already registered')) {
         setErrors({ email: 'An account with this email already exists.' })
       } else {
         toast.error(error.message)
@@ -57,139 +51,96 @@ export default function SignUpPage() {
       return
     }
 
-    // Create profile manually after signup
     if (data.user) {
-      const { error: profileError } = await supabase.from('profiles').upsert({
-        id: data.user.id,
-        email: form.email,
-        first_name: '',
-        gender: 'Prefer not to say',
-        interested_in: [],
-        city: '',
-        state: '',
-        photos: [],
-        age_range_min: 18,
-        age_range_max: 45,
-        location_radius: '25mi',
-        role: 'USER',
-        status: 'ACTIVE',
-        pax_onboarded: false,
-        profile_complete: false,
+      await fetch('/api/profiles/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: data.user.id, email: form.email }),
       })
-
-      if (profileError) {
-        console.error('Profile creation error:', profileError)
-      }
     }
 
-    router.push('/auth/verify?email=' + encodeURIComponent(form.email))
+    window.location.href = '/auth/verify?email=' + encodeURIComponent(form.email)
   }
 
-  const f = (k: string) => (ev: React.ChangeEvent<HTMLInputElement>) =>
-    setForm(p => ({ ...p, [k]: ev.target.value }))
-
   return (
-    <div className="flex flex-col min-h-svh animate-fade-up">
-      <div className="flex justify-between items-center px-5 pt-3 text-xs font-semibold">
-        <span>9:41</span><span>●●● WiFi 🔋</span>
-      </div>
+    <div className="flex flex-col min-h-svh" style={{ background: 'linear-gradient(160deg, #061B1E 0%, #0A0A0A 60%)' }}>
+      <div className="status-bar"><span>9:41</span><span>●●● WiFi 🔋</span></div>
 
       <div className="flex-1 overflow-y-auto px-6 pb-10">
-        <div className="mt-4 mb-7">
-          <Link href="/" className="text-2xl">←</Link>
+        <div className="mt-4 mb-6">
+          <Link href="/" style={{ color: 'rgba(255,255,255,0.5)', fontSize: 22 }}>←</Link>
         </div>
 
-        <h1 className="text-[28px] font-black tracking-tight mb-1">Create account</h1>
-        <p className="text-gray-500 mb-7">Start your QuicKeys journey.</p>
+        <div className="flex justify-center mb-6">
+          <QuicKeysLogo size="sm" showWordmark={false} />
+        </div>
+
+        <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 26, fontWeight: 700, color: 'white', marginBottom: 6 }}>
+          Create your account
+        </h1>
+        <p style={{ color: 'rgba(255,255,255,0.4)', marginBottom: 24, fontSize: 14 }}>
+          Start your QuicKeys journey.
+        </p>
 
         <form onSubmit={handleSubmit} className="space-y-3">
           <div>
-            <div className="relative">
-              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400">✉</span>
-              <input
-                type="email"
-                placeholder="Email address"
-                value={form.email}
-                onChange={f('email')}
-                className="w-full pl-10 pr-4 py-4 border-[1.5px] border-gray-200 rounded-xl text-base focus:border-black"
-              />
-            </div>
-            {errors.email && <p className="text-red-600 text-sm mt-1">{errors.email}</p>}
+            <input type="email" placeholder="Email address" value={form.email}
+              onChange={e => setForm(p => ({ ...p, email: e.target.value }))}
+              className="input-dark" />
+            {errors.email && <p style={{ color: '#ff6b6b', fontSize: 12, marginTop: 4 }}>{errors.email}</p>}
           </div>
 
           <div>
             <div className="relative">
-              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400">🔒</span>
-              <input
-                type={showPass ? 'text' : 'password'}
-                placeholder="Password"
-                value={form.password}
-                onChange={f('password')}
-                className="w-full pl-10 pr-12 py-4 border-[1.5px] border-gray-200 rounded-xl text-base focus:border-black"
-              />
+              <input type={showPass ? 'text' : 'password'} placeholder="Password" value={form.password}
+                onChange={e => setForm(p => ({ ...p, password: e.target.value }))}
+                className="input-dark pr-12" />
               <button type="button" onClick={() => setShowPass(p => !p)}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
+                style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.4)', fontSize: 13 }}>
                 {showPass ? '🙈' : '👁'}
               </button>
             </div>
-            {errors.password && <p className="text-red-600 text-sm mt-1">{errors.password}</p>}
+            {errors.password && <p style={{ color: '#ff6b6b', fontSize: 12, marginTop: 4 }}>{errors.password}</p>}
           </div>
 
           <div>
-            <div className="relative">
-              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400">🔒</span>
-              <input
-                type="password"
-                placeholder="Confirm password"
-                value={form.confirm}
-                onChange={f('confirm')}
-                className="w-full pl-10 pr-4 py-4 border-[1.5px] border-gray-200 rounded-xl text-base focus:border-black"
-              />
-            </div>
-            {errors.confirm && <p className="text-red-600 text-sm mt-1">{errors.confirm}</p>}
+            <input type="password" placeholder="Confirm password" value={form.confirm}
+              onChange={e => setForm(p => ({ ...p, confirm: e.target.value }))}
+              className="input-dark" />
+            {errors.confirm && <p style={{ color: '#ff6b6b', fontSize: 12, marginTop: 4 }}>{errors.confirm}</p>}
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Date of birth</label>
-            <input
-              type="date"
-              value={form.dob}
-              onChange={f('dob')}
-              className="w-full px-4 py-4 border-[1.5px] border-gray-200 rounded-xl text-base focus:border-black"
-            />
-            {errors.dob && <p className="text-red-600 text-sm mt-1">{errors.dob}</p>}
-          </div>
-
-          <div>
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={form.terms}
-                onChange={e => setForm(p => ({ ...p, terms: e.target.checked }))}
-                className="w-4.5 h-4.5 accent-black"
-              />
-              <span className="text-sm text-gray-600">
-                I agree to the{' '}
-                <span className="text-black font-semibold underline">Terms of Service</span>
-              </span>
+            <label style={{ display: 'block', color: 'rgba(255,255,255,0.5)', fontSize: 12, marginBottom: 6, fontWeight: 500, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+              Date of Birth
             </label>
-            {errors.terms && <p className="text-red-600 text-sm mt-1">{errors.terms}</p>}
+            <input type="date" value={form.dob}
+              onChange={e => setForm(p => ({ ...p, dob: e.target.value }))}
+              className="input-dark" />
+            {errors.dob && <p style={{ color: '#ff6b6b', fontSize: 12, marginTop: 4 }}>{errors.dob}</p>}
           </div>
+
+          <label className="flex items-center gap-3 cursor-pointer" style={{ paddingTop: 4 }}>
+            <input type="checkbox" checked={form.terms}
+              onChange={e => setForm(p => ({ ...p, terms: e.target.checked }))}
+              style={{ accentColor: '#0FB7BF', width: 16, height: 16 }} />
+            <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)' }}>
+              I agree to the{' '}
+              <span style={{ color: '#FFC766', fontWeight: 600 }}>Terms of Service</span>
+            </span>
+          </label>
+          {errors.terms && <p style={{ color: '#ff6b6b', fontSize: 12 }}>{errors.terms}</p>}
 
           <div className="pt-2">
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-black text-white py-4 rounded-xl font-semibold text-base disabled:opacity-40 hover:opacity-90 transition-opacity"
-            >
-              {loading ? 'Creating account…' : 'Create Account'}
+            <button type="submit" disabled={loading} className="btn-gold">
+              {loading ? 'Creating account…' : 'Create Your Profile →'}
             </button>
           </div>
         </form>
 
-        <p className="text-center text-sm text-gray-400 mt-6">
+        <p className="text-center mt-6" style={{ fontSize: 13, color: 'rgba(255,255,255,0.35)' }}>
           Already have an account?{' '}
-          <Link href="/auth/signin" className="text-black font-semibold">Sign in</Link>
+          <Link href="/auth/signin" style={{ color: '#FFC766', fontWeight: 600 }}>Log in</Link>
         </p>
       </div>
     </div>

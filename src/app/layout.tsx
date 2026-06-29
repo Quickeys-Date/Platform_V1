@@ -1,4 +1,3 @@
-// src/app/layout.tsx
 import type { Metadata, Viewport } from 'next'
 import { Toaster } from 'react-hot-toast'
 import './globals.css'
@@ -24,7 +23,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Toaster
           position="top-center"
           toastOptions={{
-            style: { fontFamily: 'Inter, sans-serif', fontSize: '14px', borderRadius: '12px' },
+            style: {
+              background: '#061B1E',
+              color: 'white',
+              border: '1px solid rgba(15,183,191,0.3)',
+              fontFamily: 'Inter, sans-serif',
+              fontSize: '14px',
+              borderRadius: '12px',
+            },
           }}
         />
       </body>

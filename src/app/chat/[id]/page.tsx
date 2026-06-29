@@ -1,9 +1,4 @@
 'use client'
-// src/app/chat/[id]/page.tsx — S-11 Chat
-// CR#1: Archive vs Unmatch as separate actions
-// CR#3: Profile stays accessible after archive
-// CR#4: WebSocket real-time messages
-// CR#5: Tap name/photo to open profile
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -21,7 +16,6 @@ function getAge(dob: string | null | undefined): string {
 export default function ChatPage() {
   const { id } = useParams<{ id: string }>()
   const supabase = createClient()
-
   const [conv, setConv] = useState<Conversation | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
   const [text, setText] = useState('')
@@ -51,7 +45,6 @@ export default function ChatPage() {
     const msgData = await msgRes.json()
     const msgs = msgData.messages || []
     setMessages(msgs)
-
     if (msgs.length > 0) {
       const last = new Date(msgs[msgs.length - 1].created_at)
       setLastMsgAge((Date.now() - last.getTime()) / (1000 * 60 * 60))
@@ -60,22 +53,16 @@ export default function ChatPage() {
 
   useEffect(() => { loadData() }, [loadData])
 
-  // CR#4: WebSocket real-time — messages appear immediately without refresh
   useEffect(() => {
-    const channel = supabase
-      .channel(`messages:${id}`)
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'messages',
-        filter: `conversation_id=eq.${id}`,
-      }, (payload) => {
-        setMessages(prev => {
-          if (prev.find(m => m.id === (payload.new as Message).id)) return prev
-          return [...prev, payload.new as Message]
+    const channel = supabase.channel(`messages:${id}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `conversation_id=eq.${id}` },
+        (payload) => {
+          setMessages(prev => {
+            if (prev.find(m => m.id === (payload.new as Message).id)) return prev
+            return [...prev, payload.new as Message]
+          })
+          setLastMsgAge(0)
         })
-        setLastMsgAge(0)
-      })
       .subscribe()
     return () => { supabase.removeChannel(channel) }
   }, [id, supabase])
@@ -86,8 +73,7 @@ export default function ChatPage() {
     const content = text.trim()
     setText('')
     const res = await apiFetch(`/api/conversations/${id}/messages`, {
-      method: 'POST',
-      body: JSON.stringify({ content }),
+      method: 'POST', body: JSON.stringify({ content }),
     })
     if (!res.ok) {
       const err = await res.json()
@@ -98,24 +84,20 @@ export default function ChatPage() {
     inputRef.current?.focus()
   }
 
-  // CR#1: Archive — keeps profile accessible, read-only chat
   const archiveConversation = async () => {
     setShowOptions(false)
     const res = await apiFetch(`/api/conversations/${id}/close`, { method: 'POST' })
     const data = await res.json()
     if (!res.ok) { toast.error('Failed to archive'); return }
-    const triggerId = data.pax_trigger_id || ''
-    window.location.href = `/pax/checkin?trigger_id=${triggerId}&type=CLOSE_CONVERSATION`
+    window.location.href = `/pax/checkin?trigger_id=${data.pax_trigger_id || ''}&type=CLOSE_CONVERSATION`
   }
 
-  // CR#1: Unmatch — permanent, triggers confirmation first
   const unmatchConversation = async () => {
     setShowUnmatchConfirm(false)
     const res = await apiFetch(`/api/conversations/${id}/unmatch`, { method: 'POST' })
     const data = await res.json()
     if (!res.ok) { toast.error('Failed to unmatch'); return }
-    const triggerId = data.pax_trigger_id || ''
-    window.location.href = `/pax/checkin?trigger_id=${triggerId}&type=CLOSE_CONVERSATION`
+    window.location.href = `/pax/checkin?trigger_id=${data.pax_trigger_id || ''}&type=CLOSE_CONVERSATION`
   }
 
   const other = conv?.other_profile as any
@@ -123,68 +105,76 @@ export default function ChatPage() {
   const show48hIndicator = !isArchived && lastMsgAge >= 48 && messages.length > 0
 
   return (
-    <div className="flex flex-col h-svh">
-      {/* Header — CR#5: tap name/photo to view profile */}
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 bg-white sticky top-0 z-10 flex-shrink-0">
-        <button onClick={() => window.location.href = '/feed'} className="text-xl p-1">←</button>
+    <div className="flex flex-col h-svh" style={{ background: '#0A0A0A' }}>
+      {/* Header */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px',
+        borderBottom: '1px solid rgba(15,183,191,0.1)',
+        background: 'rgba(6,27,30,0.9)', backdropFilter: 'blur(20px)',
+        position: 'sticky', top: 0, zIndex: 10, flexShrink: 0,
+      }}>
+        <button onClick={() => window.location.href = '/feed'} style={{ color: 'rgba(255,255,255,0.5)', fontSize: 22, padding: 4 }}>←</button>
         {other && (
-          /* CR#5: entire name+photo area is tappable to open profile */
-          <button
-            onClick={() => window.location.href = `/profile/${other.id}`}
-            className="flex items-center gap-2.5 flex-1 min-w-0 text-left"
-          >
-            <div className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-sm font-bold flex-shrink-0 overflow-hidden">
+          <button onClick={() => window.location.href = `/profile/${other.id}`}
+            className="flex items-center gap-2.5 flex-1 min-w-0 text-left">
+            <div style={{
+              width: 36, height: 36, borderRadius: '50%',
+              background: 'linear-gradient(135deg, #043538, #0A6469)',
+              border: '1.5px solid rgba(15,183,191,0.3)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 14, fontWeight: 700, color: '#0FB7BF', flexShrink: 0,
+            }}>
               {other.first_name?.[0] || '?'}
             </div>
             <div className="flex-1 min-w-0">
-              <div className="font-bold text-sm">{other.first_name}{getAge(other.date_of_birth)}</div>
-              <div className="text-xs text-gray-400">{other.city}, {other.state} · Tap to view profile</div>
+              <div style={{ fontWeight: 700, fontSize: 14, color: 'white' }}>{other.first_name}{getAge(other.date_of_birth)}</div>
+              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)' }}>Tap to view profile</div>
             </div>
           </button>
         )}
         <div className="flex items-center gap-2 flex-shrink-0">
           {!isArchived && (
-            <button
-              onClick={() => setShowOptions(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 border-[1.5px] rounded-full text-xs font-bold"
-              style={{ borderColor: '#C9A84C', color: '#C9A84C' }}>
-              ⋯ Options
+            <button onClick={() => setShowOptions(true)} style={{
+              padding: '6px 12px', borderRadius: 20,
+              border: '1.5px solid rgba(217,155,52,0.4)',
+              color: '#FFC766', fontSize: 12, fontWeight: 600,
+            }}>
+              ⋯
             </button>
           )}
-          <button
-            onClick={() => window.location.href = `/report?reported_id=${other?.id}&source=Chat`}
-            className="w-7 h-7 flex items-center justify-center text-gray-400 text-sm">
-            ⚑
-          </button>
+          <button onClick={() => window.location.href = `/report?reported_id=${other?.id}&source=Chat`}
+            style={{ color: 'rgba(255,255,255,0.3)', fontSize: 14, padding: 4 }}>⚑</button>
         </div>
         {isArchived && (
-          <span className="text-xs text-gray-400 font-medium px-2 py-1 bg-gray-100 rounded-full">Archived</span>
+          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', padding: '4px 8px', background: 'rgba(255,255,255,0.06)', borderRadius: 20 }}>
+            Archived
+          </span>
         )}
       </div>
 
-      {/* 48h indicator */}
       {show48hIndicator && (
-        <div className="px-4 py-2 text-center text-xs text-gray-400 bg-gray-50 border-b border-gray-100">
+        <div style={{ padding: '8px 16px', textAlign: 'center', fontSize: 12, color: 'rgba(255,255,255,0.3)', background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
           No messages in a while — say hello?
         </div>
       )}
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-2">
+      <div className="flex-1 overflow-y-auto" style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
         {messages.length === 0 && (
-          <div className="text-center py-12 text-gray-400">
-            <div className="text-3xl mb-3">👋</div>
-            <p className="text-sm">You matched with {other?.first_name}!<br />Send a message to start the conversation.</p>
+          <div style={{ textAlign: 'center', padding: '48px 16px', color: 'rgba(255,255,255,0.3)' }}>
+            <div style={{ fontSize: 32, marginBottom: 12 }}>👋</div>
+            <p style={{ fontSize: 14 }}>You matched with {other?.first_name}!<br />Send a message to start the conversation.</p>
           </div>
         )}
         {messages.map(msg => {
           const mine = msg.sender_id === userId
           return (
-            <div key={msg.id} className={`flex flex-col ${mine ? 'items-end' : 'items-start'}`}>
-              <div className={`max-w-[78%] px-3.5 py-2.5 text-sm leading-relaxed ${mine ? 'bubble-mine' : 'bubble-theirs'}`}>
+            <div key={msg.id} style={{ display: 'flex', flexDirection: 'column', alignItems: mine ? 'flex-end' : 'flex-start' }}>
+              <div className={mine ? 'bubble-mine' : 'bubble-theirs'}
+                style={{ maxWidth: '78%', padding: '10px 14px', fontSize: 14, lineHeight: 1.5 }}>
                 {msg.content}
               </div>
-              <div className="text-[10px] text-gray-400 mt-1 px-1">
+              <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)', marginTop: 3, padding: '0 4px' }}>
                 {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </div>
             </div>
@@ -195,36 +185,53 @@ export default function ChatPage() {
 
       {/* Input */}
       {!isArchived ? (
-        <div className="border-t border-gray-200 px-4 py-3 pb-safe flex gap-3 items-end bg-white flex-shrink-0">
+        <div style={{
+          borderTop: '1px solid rgba(15,183,191,0.1)',
+          padding: '12px 16px', paddingBottom: 'max(16px, env(safe-area-inset-bottom))',
+          display: 'flex', gap: 10, alignItems: 'flex-end',
+          background: 'rgba(6,27,30,0.9)', backdropFilter: 'blur(20px)', flexShrink: 0,
+        }}>
           <textarea
-            ref={inputRef}
-            value={text}
+            ref={inputRef} value={text}
             onChange={e => setText(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }}
-            placeholder="Message…"
-            rows={1}
-            className="flex-1 px-3.5 py-2.5 border-[1.5px] border-gray-200 rounded-2xl text-sm resize-none focus:border-gray-400 leading-5 max-h-28"
+            placeholder="Message…" rows={1}
+            style={{
+              flex: 1, padding: '10px 14px',
+              background: 'rgba(255,255,255,0.06)', border: '1.5px solid rgba(15,183,191,0.2)',
+              borderRadius: 20, color: 'white', fontSize: 14, resize: 'none',
+              fontFamily: 'inherit', maxHeight: 120, outline: 'none',
+            }}
           />
           <button onClick={send} disabled={!text.trim() || sending}
-            className="w-9 h-9 bg-black text-white rounded-full flex items-center justify-center disabled:opacity-40 flex-shrink-0 text-base">
+            style={{
+              width: 38, height: 38, borderRadius: '50%', flexShrink: 0,
+              background: text.trim() ? 'linear-gradient(135deg, #FFC766, #D99B34)' : 'rgba(255,255,255,0.1)',
+              color: text.trim() ? '#0A0A0A' : 'rgba(255,255,255,0.3)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 16, fontWeight: 700, transition: 'all 0.2s',
+              border: 'none', cursor: text.trim() ? 'pointer' : 'default',
+            }}>
             ↑
           </button>
         </div>
       ) : (
-        <div className="border-t border-gray-100 px-4 py-4 text-center flex-shrink-0 bg-white">
-          <p className="text-sm text-gray-400 mb-3">This conversation is archived and read-only.</p>
-          {/* CR#3: Profile still accessible from archived chat */}
+        <div style={{
+          borderTop: '1px solid rgba(255,255,255,0.05)', padding: '16px',
+          textAlign: 'center', background: 'rgba(6,27,30,0.6)', flexShrink: 0,
+        }}>
+          <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.3)', marginBottom: 10 }}>
+            This conversation is archived and read-only.
+          </p>
           {other && (
-            <button
-              onClick={() => window.location.href = `/profile/${other.id}`}
-              className="text-sm font-semibold text-black underline">
-              View {other.first_name}'s profile
+            <button onClick={() => window.location.href = `/profile/${other.id}`}
+              style={{ color: '#FFC766', fontSize: 13, fontWeight: 600 }}>
+              View {other.first_name}'s profile →
             </button>
           )}
         </div>
       )}
 
-      {/* CR#1 & CR#2: Options modal */}
       {showOptions && (
         <CloseConversationModal
           onArchive={archiveConversation}
@@ -232,8 +239,6 @@ export default function ChatPage() {
           onCancel={() => setShowOptions(false)}
         />
       )}
-
-      {/* CR#2: Unmatch confirmation */}
       {showUnmatchConfirm && (
         <UnmatchConfirmModal
           onConfirm={unmatchConversation}

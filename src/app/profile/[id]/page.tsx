@@ -31,7 +31,7 @@ export default function ConnectionProfilePage() {
             const { data: signed } = await supabase.storage.from('photos').createSignedUrl(path, 3600)
             return signed?.signedUrl || ''
           })
-        ).then(resolved => setPhotoUrls(resolved.filter(Boolean)))
+        ).then(urls => setPhotoUrls(urls.filter(Boolean)))
         setLoading(false)
       })
   }, [id, router, supabase])
@@ -49,77 +49,93 @@ export default function ConnectionProfilePage() {
   }
 
   if (loading) return (
-    <div className="flex items-center justify-center min-h-svh">
-      <div className="w-8 h-8 border-2 border-black border-t-transparent rounded-full animate-spin" />
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100svh', background: '#0A0A0A' }}>
+      <div style={{ width: 24, height: 24, border: '2px solid #0FB7BF', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
     </div>
   )
   if (!profile) return null
 
-  const photos = photoUrls.length > 0 ? photoUrls : []
+  const photos = photoUrls
   const hasMultiple = photos.length > 1
 
   return (
-    <div className="flex flex-col min-h-svh">
-      <div className="relative w-full flex-shrink-0" style={{ maxHeight: '60svh', aspectRatio: '3/4' }}>
+    <div className="flex flex-col min-h-svh" style={{ background: '#0A0A0A' }}>
+      {/* Photo hero */}
+      <div style={{ position: 'relative', width: '100%', maxHeight: '60svh', aspectRatio: '3/4', flexShrink: 0 }}>
         {photos[photoIndex] ? (
-          <img src={photos[photoIndex]} alt="" className="w-full h-full object-cover" />
+          <img src={photos[photoIndex]} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         ) : (
-          <div className="w-full h-full bg-gray-100 flex items-center justify-center text-6xl">👤</div>
+          <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, #043538, #0A0A0A)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 64, color: 'rgba(255,255,255,0.2)' }}>👤</div>
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
-        <button onClick={() => router.back()}
-          className="absolute top-12 left-4 w-9 h-9 rounded-full flex items-center justify-center text-white"
-          style={{ background: 'rgba(0,0,0,0.4)' }}>←</button>
+        {/* Gradient overlay */}
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(10,10,10,0.95) 0%, rgba(10,10,10,0.3) 40%, transparent 70%)' }} />
+
+        {/* Back button */}
+        <button onClick={() => router.back()} style={{
+          position: 'absolute', top: 16, left: 16, width: 36, height: 36, borderRadius: '50%',
+          background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.15)',
+          color: 'white', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>←</button>
+
+        {/* Report button */}
         <button onClick={() => window.location.href = `/report?reported_id=${id}&source=Connection+Profile`}
-          className="absolute top-12 right-4 w-9 h-9 rounded-full flex items-center justify-center text-white"
-          style={{ background: 'rgba(0,0,0,0.4)' }}>⚑</button>
+          style={{ position: 'absolute', top: 16, right: 16, width: 36, height: 36, borderRadius: '50%', background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.6)', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>⚑</button>
+
+        {/* Photo navigation */}
         {hasMultiple && photoIndex > 0 && (
-          <button onClick={() => setPhotoIndex(i => i - 1)}
-            className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full flex items-center justify-center text-white"
-            style={{ background: 'rgba(0,0,0,0.4)' }}>‹</button>
+          <button onClick={() => setPhotoIndex(i => i - 1)} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', width: 32, height: 32, borderRadius: '50%', background: 'rgba(0,0,0,0.5)', color: 'white', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>‹</button>
         )}
         {hasMultiple && photoIndex < photos.length - 1 && (
-          <button onClick={() => setPhotoIndex(i => i + 1)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full flex items-center justify-center text-white"
-            style={{ background: 'rgba(0,0,0,0.4)' }}>›</button>
+          <button onClick={() => setPhotoIndex(i => i + 1)} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', width: 32, height: 32, borderRadius: '50%', background: 'rgba(0,0,0,0.5)', color: 'white', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>›</button>
         )}
+
+        {/* Photo dots */}
         {hasMultiple && (
-          <div className="absolute bottom-20 left-0 right-0 flex justify-center gap-1.5">
+          <div style={{ position: 'absolute', bottom: 72, left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: 6 }}>
             {photos.map((_, i) => (
-              <button key={i} onClick={() => setPhotoIndex(i)}
-                className="w-1.5 h-1.5 rounded-full transition-all"
-                style={{ background: i === photoIndex ? 'white' : 'rgba(255,255,255,0.4)' }} />
+              <button key={i} onClick={() => setPhotoIndex(i)} style={{ width: 6, height: 6, borderRadius: '50%', background: i === photoIndex ? '#FFC766' : 'rgba(255,255,255,0.3)', border: 'none', cursor: 'pointer' }} />
             ))}
           </div>
         )}
-        <div className="absolute bottom-0 left-0 right-0 p-5">
-          <h1 className="text-2xl font-black text-white tracking-tight">
+
+        {/* Name overlay */}
+        <div style={{ position: 'absolute', bottom: 20, left: 20, right: 20 }}>
+          <h1 style={{ fontSize: 28, fontWeight: 800, color: 'white', letterSpacing: '-0.02em', marginBottom: 4 }}>
             {profile.first_name}{getAge(profile.date_of_birth)}
           </h1>
-          <p className="text-sm mt-0.5" style={{ color: 'rgba(255,255,255,0.8)' }}>{profile.city}, {profile.state}</p>
+          <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.6)' }}>{profile.city}, {profile.state}</p>
         </div>
       </div>
-      <div className="flex-1 overflow-y-auto px-5 py-5">
+
+      {/* Profile details */}
+      <div className="flex-1 overflow-y-auto" style={{ padding: '20px' }}>
         {profile.bio && (
-          <div className="mb-5">
-            <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">About</h2>
-            <p className="text-gray-900 leading-relaxed">{profile.bio}</p>
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 8 }}>About</div>
+            <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.85)', lineHeight: 1.6 }}>{profile.bio}</p>
           </div>
         )}
         {profile.connection_prompt && (
-          <div className="mb-6">
-            <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">What matters most to them in a connection</h2>
-            <div className="border border-gray-200 rounded-xl p-4">
-              <p className="text-gray-600 italic leading-relaxed">"{profile.connection_prompt}"</p>
+          <div style={{ marginBottom: 24 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 8 }}>What matters most to them</div>
+            <div style={{ background: 'rgba(15,183,191,0.08)', border: '1px solid rgba(15,183,191,0.2)', borderRadius: 14, padding: '14px 16px' }}>
+              <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.8)', fontStyle: 'italic', lineHeight: 1.6 }}>"{profile.connection_prompt}"</p>
             </div>
           </div>
         )}
-        <button disabled={starting} onClick={startConversation}
-          className="w-full bg-black text-white py-4 rounded-xl font-semibold text-base disabled:opacity-40 mb-3">
+
+        <button disabled={starting} onClick={startConversation} style={{
+          width: '100%', padding: 16, borderRadius: 14, marginBottom: 12,
+          background: starting ? 'rgba(255,255,255,0.1)' : 'linear-gradient(135deg, #FFC766, #D99B34)',
+          color: starting ? 'rgba(255,255,255,0.4)' : '#0A0A0A',
+          fontWeight: 700, fontSize: 16, cursor: starting ? 'default' : 'pointer', border: 'none',
+          boxShadow: starting ? 'none' : '0 4px 20px rgba(217,155,52,0.3)',
+        }}>
           {starting ? 'Starting…' : 'Start Conversation'}
         </button>
+
         <button onClick={() => window.location.href = `/report?reported_id=${id}&source=Connection+Profile`}
-          className="w-full py-3 text-sm font-medium text-gray-400 border border-gray-200 rounded-xl">
+          style={{ width: '100%', padding: 14, borderRadius: 14, background: 'transparent', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.3)', fontSize: 13, cursor: 'pointer' }}>
           Report User
         </button>
       </div>

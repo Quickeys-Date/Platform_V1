@@ -274,23 +274,57 @@ export default function MyProfilePage() {
             width: '100%', display: 'flex', alignItems: 'center', gap: 12,
             padding: '14px 0', background: 'transparent', cursor: 'pointer', textAlign: 'left',
           }}>
-            <span>🚪</span>
             <span style={{ fontSize: 14, color: '#ff6b6b', fontWeight: 600 }}>Sign out</span>
           </button>
         </div>
       </div>
 
-      {showSignOut && (
-        <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'flex-end', zIndex: 50 }} onClick={() => setShowSignOut(false)}>
-          <div style={{ width: '100%', background: 'linear-gradient(160deg, #061B1E, #0A0A0A)', borderTop: '1px solid rgba(255,80,80,0.2)', borderRadius: '24px 24px 0 0', padding: '24px 20px 36px', animation: 'slideUp 0.25s ease' }} onClick={e => e.stopPropagation()}>
-            <div style={{ width: 36, height: 4, background: 'rgba(255,255,255,0.1)', borderRadius: 2, margin: '0 auto 20px' }} />
-            <h2 style={{ fontWeight: 700, fontSize: 18, color: 'white', marginBottom: 8 }}>Sign out?</h2>
-            <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 14, marginBottom: 24 }}>You'll need to log in again to access your account.</p>
-            <button onClick={signOut} style={{ width: '100%', padding: 16, background: 'linear-gradient(135deg, #c0392b, #e74c3c)', borderRadius: 14, color: 'white', fontWeight: 700, fontSize: 15, cursor: 'pointer', border: 'none', marginBottom: 10 }}>Sign Out</button>
-            <button onClick={() => setShowSignOut(false)} style={{ width: '100%', padding: 12, background: 'transparent', color: 'rgba(255,255,255,0.35)', fontSize: 14, cursor: 'pointer', border: 'none' }}>Cancel</button>
-          </div>
-        </div>
-      )}
+
+        {showSignOut && (
+  <div
+    className="signout-overlay"
+    onClick={() => setShowSignOut(false)}
+  >
+    <div
+      className="signout-dialog"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="signout-title"
+      onClick={event => event.stopPropagation()}
+    >
+
+
+
+
+      <h2 id="signout-title" className="signout-title">
+        Sign out?
+      </h2>
+
+      <p className="signout-description">
+        You&apos;ll need to log in again to access your account.
+      </p>
+
+      <div className="signout-actions">
+        <button
+          type="button"
+          onClick={() => setShowSignOut(false)}
+          className="signout-cancel"
+        >
+          Cancel
+        </button>
+
+        <button
+          type="button"
+          onClick={signOut}
+          className="signout-confirm"
+        >
+          Sign Out
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
 
       <BottomNav active="profile" />
     </div>

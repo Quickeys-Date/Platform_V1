@@ -1,5 +1,7 @@
 'use client'
+
 import { useState } from 'react'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { QuicKeysLogo } from '@/components/QuicKeysLogo'
 import toast from 'react-hot-toast'
@@ -9,51 +11,112 @@ export default function ResetPasswordPage() {
   const [sent, setSent] = useState(false)
   const [loading, setLoading] = useState(false)
 
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault()
+
+    if (!email.trim()) return
+
     setLoading(true)
+
     const supabase = createClient()
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/update-password`,
-    })
-    if (error) { toast.error(error.message); setLoading(false); return }
+
+    const { error } = await supabase.auth.resetPasswordForEmail(
+      email.trim(),
+      {
+        redirectTo: `${window.location.origin}/auth/update-password`,
+      }
+    )
+
+    if (error) {
+      toast.error(error.message)
+      setLoading(false)
+      return
+    }
+
     setSent(true)
+    setLoading(false)
   }
 
   return (
-    <div className="flex flex-col min-h-svh" style={{ background: 'linear-gradient(160deg, #061B1E 0%, #0A0A0A 60%)' }}>
-      <div style={{ padding: '16px 20px' }}>
-        <a href="/auth/signin" style={{ color: 'rgba(255,255,255,0.5)', fontSize: 22 }}>←</a>
-      </div>
+    <main className="reset-page">
+      <Link
+        href="/auth/signin"
+        className="reset-back"
+        aria-label="Return to login"
+      >
+        ←
+      </Link>
 
-      <div className="flex-1 flex flex-col items-center justify-center px-6">
-        <div className="mb-8"><QuicKeysLogo size="sm" showWordmark={false} /></div>
+      <section className="reset-card">
+        <div className="reset-logo">
+          <QuicKeysLogo size="sm" showWordmark={false} />
+        </div>
 
         {sent ? (
-          <div className="text-center">
-            <div style={{ fontSize: 48, marginBottom: 16 }}>✉️</div>
-            <h1 style={{ fontSize: 24, fontWeight: 700, color: 'white', marginBottom: 8 }}>Check your email</h1>
-            <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.4)', lineHeight: 1.6 }}>
-              We sent a password reset link to <span style={{ color: '#FFC766' }}>{email}</span>.
+          <div className="reset-success" aria-live="polite">
+            <div className="reset-success-symbol" aria-hidden="true">
+              ✓
+            </div>
+
+            <h1 className="reset-title">Check your email</h1>
+
+            <p className="reset-description">
+              We sent a password reset link to{' '}
+              <span className="reset-email">{email}</span>.
             </p>
+
+            <Link href="/auth/signin" className="reset-return-link">
+              Return to login
+            </Link>
           </div>
         ) : (
           <>
-            <h1 style={{ fontSize: 26, fontWeight: 700, color: 'white', marginBottom: 8, alignSelf: 'flex-start' }}>Reset password</h1>
-            <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.4)', marginBottom: 24, alignSelf: 'flex-start' }}>
-              Enter your email and we'll send you a reset link.
-            </p>
-            <form onSubmit={submit} style={{ width: '100%' }}>
-              <input type="email" placeholder="Email address" value={email}
-                onChange={e => setEmail(e.target.value)}
-                className="input-dark" style={{ marginBottom: 16 }} />
-              <button type="submit" disabled={loading || !email} className="btn-gold">
+            <div className="reset-introduction">
+              <p className="reset-eyebrow">Account recovery</p>
+
+              <h1 className="reset-title">Reset password</h1>
+
+              <p className="reset-description">
+                Enter your email address and we&apos;ll send you a secure
+                password reset link.
+              </p>
+            </div>
+
+            <form onSubmit={submit} className="reset-form">
+              <div className="reset-field">
+                <label htmlFor="reset-email" className="reset-label">
+                  Email address
+                </label>
+
+                <input
+                  id="reset-email"
+                  type="email"
+                  inputMode="email"
+                  autoComplete="email"
+                  placeholder="name@email.com"
+                  value={email}
+                  onChange={event => setEmail(event.target.value)}
+                  className="input-dark reset-input"
+                  required
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading || !email.trim()}
+                className="btn-gold reset-submit"
+              >
                 {loading ? 'Sending…' : 'Send Reset Link'}
               </button>
             </form>
+
+            <p className="reset-alternate">
+              Remember your password?{' '}
+              <Link href="/auth/signin">Log in</Link>
+            </p>
           </>
         )}
-      </div>
-    </div>
+      </section>
+    </main>
   )
 }

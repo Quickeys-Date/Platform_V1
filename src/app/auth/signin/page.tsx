@@ -1,107 +1,211 @@
 'use client'
+
 import { useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
-import { QuicKeysLogo } from '@/components/QuicKeysLogo'
 
 export default function SignInPage() {
   const [loading, setLoading] = useState(false)
-  const [showPass, setShowPass] = useState(false)
-  const [form, setForm] = useState({ email: '', password: '' })
+  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const [form, setForm] = useState({
+    email: '',
+    password: '',
+    remember: false,
+  })
+
+  const handleSubmit = async (
+    event: React.FormEvent<HTMLFormElement>
+  ) => {
+    event.preventDefault()
     setError('')
+
+    if (!form.email.trim() || !form.password) {
+      setError('Please enter your email address and password.')
+      return
+    }
+
     setLoading(true)
-    const supabase = createClient()
 
-    const { data, error: authError } = await supabase.auth.signInWithPassword({
-      email: form.email,
-      password: form.password,
-    })
+    try {
+      const supabase = createClient()
 
-    if (authError) { setError('Invalid email or password.'); setLoading(false); return }
-    if (!data.user) { setError('Login failed. Please try again.'); setLoading(false); return }
+      const { data, error: authError } =
+        await supabase.auth.signInWithPassword({
+          email: form.email.trim(),
+          password: form.password,
+        })
 
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('profile_complete, pax_onboarded, role')
-      .eq('id', data.user.id)
-      .single()
+      if (authError) {
+        setError('Invalid email or password.')
+        return
+      }
 
-    if (!profile || profile.role === undefined) {
-      window.location.href = '/onboarding/profile'
-    } else if (profile.role === 'ADMIN') {
-      window.location.href = '/admin/dashboard'
-    } else if (!profile.profile_complete) {
-      window.location.href = '/onboarding/profile'
-    } else if (!profile.pax_onboarded) {
-      window.location.href = '/onboarding/pax'
-    } else {
-      window.location.href = '/feed'
+      if (!data.user) {
+        setError('Login failed. Please try again.')
+        return
+      }
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('profile_complete, pax_onboarded, role')
+        .eq('id', data.user.id)
+        .single()
+
+      if (!profile) {
+        window.location.href = '/onboarding/profile'
+      } else if (profile.role === 'ADMIN') {
+        window.location.href = '/admin/dashboard'
+      } else if (!profile.profile_complete) {
+        window.location.href = '/onboarding/profile'
+      } else if (!profile.pax_onboarded) {
+        window.location.href = '/onboarding/pax'
+      } else {
+        window.location.href = '/feed'
+      }
+    } catch {
+      setError('Unable to log in. Please try again.')
+    } finally {
+      setLoading(false)
     }
   }
 
   return (
-    <div className="flex flex-col min-h-svh" style={{ background: 'linear-gradient(160deg, #061B1E 0%, #0A0A0A 60%)' }}>
-      <div className="status-bar"><span>9:41</span><span>●●● WiFi 🔋</span></div>
+    <main className="signin-page">
+      <div className="signin-frame" aria-hidden="true" />
 
-      <div className="flex-1 flex flex-col px-6 py-4 overflow-y-auto">
-        <div className="mb-6">
-          <Link href="/" style={{ color: 'rgba(255,255,255,0.5)', fontSize: 22 }}>←</Link>
-        </div>
-
-        <div className="flex justify-center mb-8">
-          <QuicKeysLogo size="md" showWordmark={false} />
-        </div>
-
-        <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 28, fontWeight: 700, color: 'white', marginBottom: 6 }}>
-          Welcome back
-        </h1>
-        <p style={{ color: 'rgba(255,255,255,0.4)', marginBottom: 28, fontSize: 15 }}>
-          Log in to access your account.
-        </p>
-
-        <form onSubmit={handleSubmit} className="space-y-3">
-          <input
-            type="email" placeholder="Email address"
-            value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))}
-            className="input-dark"
+      <section className="signin-content">
+        <div className="signin-logo">
+          <Image
+            src="/quickeys-icon.png"
+            alt="QuicKeys"
+            width={84}
+            height={84}
+            priority
           />
-          <div className="relative">
+        </div>
+
+        <header className="signin-heading">
+          <h1>Welcome back</h1>
+
+          <p>
+            Log in to continue your QuicKeys journey
+          </p>
+        </header>
+
+        <form onSubmit={handleSubmit} className="signin-form">
+          <div className="signin-field">
+            <label htmlFor="signin-email">
+              Email address
+            </label>
+
             <input
-              type={showPass ? 'text' : 'password'} placeholder="Password"
-              value={form.password} onChange={e => setForm(p => ({ ...p, password: e.target.value }))}
-              className="input-dark pr-12"
+              id="signin-email"
+              type="email"
+              placeholder="name@email.com"
+              autoComplete="email"
+              disabled={loading}
+              value={form.email}
+              onChange={(event) =>
+                setForm((previous) => ({
+                  ...previous,
+                  email: event.target.value,
+                }))
+              }
             />
-            <button type="button" onClick={() => setShowPass(p => !p)}
-              style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.4)', fontSize: 13 }}>
-              {showPass ? '🙈' : '👁'}
-            </button>
           </div>
 
-          {error && <p style={{ color: '#ff6b6b', fontSize: 13 }}>{error}</p>}
+          <div className="signin-field">
+            <label htmlFor="signin-password">
+              Password
+            </label>
 
-          <div className="flex justify-between items-center py-1">
-            <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.35)' }}>Remember me</span>
-            <Link href="/auth/reset-password" style={{ fontSize: 13, color: '#0FB7BF', fontWeight: 500 }}>
+            <div className="signin-input-wrapper">
+              <input
+                id="signin-password"
+                type={showPassword ? 'text' : 'password'}
+                placeholder="Enter your password"
+                autoComplete="current-password"
+                disabled={loading}
+                value={form.password}
+                onChange={(event) =>
+                  setForm((previous) => ({
+                    ...previous,
+                    password: event.target.value,
+                  }))
+                }
+              />
+
+              <button
+                type="button"
+                className="signin-eye"
+                aria-label={
+                  showPassword
+                    ? 'Hide password'
+                    : 'Show password'
+                }
+                onClick={() =>
+                  setShowPassword((previous) => !previous)
+                }
+              >
+                {showPassword ? '◉' : '◎'}
+              </button>
+            </div>
+          </div>
+
+          <div className="signin-options">
+            <label className="signin-remember">
+              <input
+                type="checkbox"
+                checked={form.remember}
+                disabled={loading}
+                onChange={(event) =>
+                  setForm((previous) => ({
+                    ...previous,
+                    remember: event.target.checked,
+                  }))
+                }
+              />
+
+              <span>Remember me</span>
+            </label>
+
+            <Link
+              href="/auth/reset-password"
+              className="signin-forgot"
+            >
               Forgot password?
             </Link>
           </div>
 
-          <div className="pt-2">
-            <button type="submit" disabled={loading} className="btn-gold">
-              {loading ? 'Logging in…' : 'Log In'}
-            </button>
-          </div>
+          {error && (
+            <div className="signin-error" role="alert">
+              {error}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            className="signin-submit"
+            disabled={loading}
+          >
+            {loading ? 'Logging in…' : 'Log in'}
+          </button>
         </form>
 
-        <p className="text-center mt-8" style={{ fontSize: 13, color: 'rgba(255,255,255,0.35)' }}>
+        <p className="signin-signup">
           New to QuicKeys?{' '}
-          <Link href="/auth/signup" style={{ color: '#FFC766', fontWeight: 600 }}>Create account</Link>
+          <Link href="/auth/signup">
+            Create your account
+          </Link>
         </p>
-      </div>
-    </div>
+
+        <Link href="/" className="signin-home">
+          ← Return home
+        </Link>
+      </section>
+    </main>
   )
 }

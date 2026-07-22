@@ -3766,3 +3766,447 @@ body {
     padding-top: 42px;
   }
 }
+/* ============================================================
+   Responsive connection profile
+   ============================================================ */
+
+.connection-profile-page {
+  width: 100%;
+  min-height: 100svh;
+  padding: 0;
+  color: white;
+  background:
+    radial-gradient(
+      circle at 25% 10%,
+      rgba(13, 158, 166, 0.08),
+      transparent 32%
+    ),
+    #0a0a0a;
+}
+
+.connection-profile-shell {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 100svh;
+  margin-inline: auto;
+}
+
+.connection-profile-photo-panel {
+  position: relative;
+  width: 100%;
+  height: min(62svh, 680px);
+  min-height: 430px;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, #043538, #0a0a0a);
+}
+
+.connection-profile-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 25%;
+}
+
+.connection-profile-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: rgba(255, 231, 177, 0.55);
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 84px;
+  background:
+    radial-gradient(
+      circle at 50% 38%,
+      rgba(13, 158, 166, 0.26),
+      transparent 38%
+    ),
+    linear-gradient(145deg, #043538, #021415);
+}
+
+.connection-profile-photo-gradient {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(
+      to top,
+      rgba(10, 10, 10, 0.97) 0%,
+      rgba(10, 10, 10, 0.48) 30%,
+      transparent 68%
+    );
+}
+
+.connection-profile-back,
+.connection-profile-report-icon,
+.connection-profile-photo-arrow {
+  position: absolute;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  background: rgba(6, 27, 30, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 50%;
+  cursor: pointer;
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  transition:
+    background 180ms ease,
+    border-color 180ms ease,
+    transform 180ms ease;
+}
+
+.connection-profile-back,
+.connection-profile-report-icon {
+  top: 18px;
+  width: 40px;
+  height: 40px;
+}
+
+.connection-profile-back {
+  left: 18px;
+  font-size: 20px;
+}
+
+.connection-profile-report-icon {
+  right: 18px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 15px;
+}
+
+.connection-profile-back:hover,
+.connection-profile-report-icon:hover,
+.connection-profile-photo-arrow:hover {
+  color: #ffc766;
+  background: rgba(4, 53, 56, 0.9);
+  border-color: rgba(255, 199, 102, 0.4);
+}
+
+.connection-profile-photo-arrow {
+  top: 50%;
+  width: 38px;
+  height: 38px;
+  font-size: 24px;
+  transform: translateY(-50%);
+}
+
+.connection-profile-photo-arrow:hover {
+  transform: translateY(-50%) scale(1.04);
+}
+
+.connection-profile-photo-previous {
+  left: 14px;
+}
+
+.connection-profile-photo-next {
+  right: 14px;
+}
+
+.connection-profile-dots {
+  position: absolute;
+  right: 0;
+  bottom: 92px;
+  left: 0;
+  z-index: 2;
+  display: flex;
+  justify-content: center;
+  gap: 7px;
+}
+
+.connection-profile-dot {
+  width: 7px;
+  height: 7px;
+  padding: 0;
+  background: rgba(255, 255, 255, 0.32);
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.connection-profile-dot-active {
+  background: #ffc766;
+  box-shadow: 0 0 8px rgba(255, 199, 102, 0.7);
+}
+
+.connection-profile-photo-name {
+  position: absolute;
+  right: 22px;
+  bottom: 24px;
+  left: 22px;
+  z-index: 2;
+}
+
+.connection-profile-photo-name h1 {
+  margin: 0 0 4px;
+  color: white;
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: clamp(28px, 5vw, 38px);
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.connection-profile-photo-name p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.66);
+  font-size: 14px;
+}
+
+.connection-profile-details {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+  padding: 26px 20px max(30px, env(safe-area-inset-bottom));
+}
+
+.connection-profile-details-header {
+  display: none;
+}
+
+.connection-profile-information {
+  width: 100%;
+}
+
+.connection-profile-section {
+  margin-bottom: 24px;
+}
+
+.connection-profile-section h3 {
+  margin: 0 0 9px;
+  color: rgba(255, 199, 102, 0.72);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.connection-profile-bio {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+.connection-profile-prompt {
+  margin: 0;
+  padding: 16px 18px;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 15px;
+  font-style: italic;
+  line-height: 1.65;
+  background: rgba(15, 183, 191, 0.07);
+  border: 1px solid rgba(15, 183, 191, 0.2);
+  border-radius: 14px;
+}
+
+.connection-profile-actions {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  margin-top: auto;
+  gap: 11px;
+}
+
+.connection-profile-start,
+.connection-profile-report {
+  width: 100%;
+  min-height: 50px;
+  padding: 13px 20px;
+  font-family: inherit;
+  font-weight: 700;
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.connection-profile-start {
+  color: #0a0a0a;
+  font-size: 15px;
+  background: linear-gradient(135deg, #ffc766, #d99b34);
+  border: 1px solid rgba(255, 231, 177, 0.35);
+  box-shadow: 0 7px 24px rgba(217, 155, 52, 0.22);
+}
+
+.connection-profile-start:disabled {
+  color: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.08);
+  border-color: transparent;
+  box-shadow: none;
+  cursor: default;
+}
+
+.connection-profile-report {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 13px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+}
+
+.connection-profile-report:hover {
+  color: rgba(255, 255, 255, 0.7);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.connection-profile-loading {
+  display: grid;
+  place-items: center;
+  min-height: 100svh;
+  background: #0a0a0a;
+}
+
+.connection-profile-spinner {
+  width: 26px;
+  height: 26px;
+  border: 2px solid #0fb7bf;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 800ms linear infinite;
+}
+
+/* Small phone */
+
+@media (max-width: 390px) {
+  .connection-profile-photo-panel {
+    height: 56svh;
+    min-height: 390px;
+  }
+
+  .connection-profile-details {
+    padding-right: 16px;
+    padding-left: 16px;
+  }
+}
+
+/* Tablet */
+
+@media (min-width: 700px) {
+  .connection-profile-page {
+    padding: 32px;
+  }
+
+  .connection-profile-shell {
+    max-width: 720px;
+    min-height: auto;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.018);
+    border: 1px solid rgba(217, 155, 52, 0.18);
+    border-radius: 22px;
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.38);
+  }
+
+  .connection-profile-photo-panel {
+    height: min(68svh, 720px);
+  }
+
+  .connection-profile-details {
+    padding: 30px;
+  }
+}
+
+/* Laptop and monitor */
+
+@media (min-width: 1000px) {
+  .connection-profile-page {
+    display: grid;
+    place-items: center;
+    padding: clamp(30px, 4vw, 60px);
+  }
+
+  .connection-profile-shell {
+    display: grid;
+    grid-template-columns: minmax(380px, 500px) minmax(380px, 1fr);
+    width: min(100%, 1080px);
+    max-width: 1080px;
+    min-height: min(720px, calc(100svh - 80px));
+    overflow: hidden;
+  }
+
+  .connection-profile-photo-panel {
+    width: 100%;
+    height: 100%;
+    min-height: 650px;
+    max-height: calc(100svh - 80px);
+    aspect-ratio: auto;
+  }
+
+  .connection-profile-image {
+    object-position: center 22%;
+  }
+
+  .connection-profile-photo-gradient {
+    background:
+      linear-gradient(
+        to top,
+        rgba(10, 10, 10, 0.96) 0%,
+        rgba(10, 10, 10, 0.34) 30%,
+        transparent 65%
+      );
+  }
+
+  .connection-profile-details {
+    min-height: 650px;
+    max-height: calc(100svh - 80px);
+    padding: clamp(34px, 4vw, 52px);
+    overflow-y: auto;
+  }
+
+  .connection-profile-details-header {
+    display: block;
+    margin-bottom: 34px;
+  }
+
+  .connection-profile-eyebrow {
+    margin: 0 0 7px;
+    color: #d99b34;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  .connection-profile-details-header h2 {
+    margin: 0;
+    color: white;
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: clamp(25px, 2.3vw, 32px);
+    font-weight: 700;
+    line-height: 1.25;
+  }
+
+  .connection-profile-actions {
+    padding-top: 18px;
+  }
+}
+
+/* Large monitor */
+
+@media (min-width: 1700px) {
+  .connection-profile-shell {
+    grid-template-columns: 500px minmax(420px, 1fr);
+    max-width: 1160px;
+  }
+}
+
+/* Short desktop screens */
+
+@media (min-width: 1000px) and (max-height: 760px) {
+  .connection-profile-page {
+    place-items: start center;
+    overflow-y: auto;
+  }
+
+  .connection-profile-shell {
+    min-height: 620px;
+  }
+
+  .connection-profile-photo-panel,
+  .connection-profile-details {
+    min-height: 620px;
+  }
+}

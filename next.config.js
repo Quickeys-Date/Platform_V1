@@ -15,6 +15,11 @@ const sharedConfig = {
 
 module.exports = phase => ({
   ...sharedConfig,
-  // A production build must never overwrite assets used by a running dev server.
-  distDir: phase === PHASE_DEVELOPMENT_SERVER ? '.next-dev' : '.next-build',
+  // Vercel requires the standard .next routes manifest. Local development and
+  // local production checks stay isolated from existing review artifacts.
+  distDir: process.env.VERCEL
+    ? '.next'
+    : phase === PHASE_DEVELOPMENT_SERVER
+      ? '.next-dev'
+      : '.next-build',
 })

@@ -8,8 +8,9 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { PAX_RESPONSES } from '@/lib/pax'
 import toast from 'react-hot-toast'
+import styles from './page.module.css'
 
-type Tab = 'dashboard' | 'users' | 'pax' | 'reports' | 'feedback'
+type Tab = 'dashboard' | 'applications' | 'users' | 'pax' | 'reports' | 'feedback'
 
 const EMOTION_LABELS: Record<string, string> = {
   PAX_GOOD: 'Good', PAX_NEUTRAL: 'Neutral', PAX_NOT_GREAT: 'Not Great',
@@ -23,20 +24,49 @@ export default function AdminDashboardPage() {
   const [stats, setStats] = useState<any>(null)
   const [users, setUsers] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
 
   useEffect(() => {
-    fetch('/api/admin/stats').then(r => r.json()).then(d => { setStats(d); setLoading(false) })
-    supabase.from('profiles').select('*').eq('role', 'USER').order('created_at', { ascending: false })
-      .then(({ data }) => setUsers(data || []))
+    const loadAdmin = async () => {
+      try {
+        const response = await fetch('/api/admin/stats')
+        if (response.status === 401 || response.status === 403) {
+          router.replace('/admin/login')
+          return
+        }
+        if (!response.ok) throw new Error('Unable to load dashboard')
+
+        const data = await response.json()
+        setStats(data)
+
+        const { data: userData, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('role', 'USER')
+          .order('created_at', { ascending: false })
+        if (error) throw error
+        setUsers(userData || [])
+      } catch {
+        setLoadError('The admin dashboard could not be loaded.')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadAdmin()
   }, []) // eslint-disable-line
 
-  const modUser = async (userId: string, action: string) => {
+  const modUser = async (userId: string, action: string, reason?: string) => {
     const res = await fetch(`/api/admin/users/${userId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action }),
+      body: JSON.stringify({ action, reason }),
     })
-    if (!res.ok) { toast.error('Action failed'); return }
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      toast.error(data.error || 'Action failed')
+      return
+    }
 
     if (action === 'EXPORT_DATA') {
       const data = await res.json()
@@ -47,12 +77,14 @@ export default function AdminDashboardPage() {
       return
     }
 
-    toast.success(`${action.charAt(0) + action.slice(1).toLowerCase()} applied`)
+    toast.success(action === 'APPROVE' ? 'Beta access approved' : action === 'REJECT' ? 'Application rejected' : `${action.charAt(0) + action.slice(1).toLowerCase()} applied`)
     setUsers(prev => prev.map(u => {
       if (u.id !== userId) return u
       if (action === 'SUSPEND') return { ...u, status: 'SUSPENDED' }
       if (action === 'RESTORE') return { ...u, status: 'ACTIVE' }
       if (action === 'DEACTIVATE') return { ...u, status: 'DEACTIVATED' }
+      if (action === 'APPROVE') return { ...u, status: 'ACTIVE', approved_at: new Date().toISOString() }
+      if (action === 'REJECT') return { ...u, status: 'REJECTED' }
       return u
     }))
   }
@@ -71,6 +103,7 @@ export default function AdminDashboardPage() {
 
   const navItems: { id: Tab; icon: string; label: string }[] = [
     { id: 'dashboard', icon: '🏠', label: 'Home' },
+    { id: 'applications', icon: '✓', label: 'Beta Applications' },
     { id: 'users', icon: '👥', label: 'Users' },
     { id: 'pax', icon: '🔑', label: 'Pax' },
     { id: 'reports', icon: '⚑', label: 'Reports' },
@@ -79,36 +112,43 @@ export default function AdminDashboardPage() {
 
   const totalEmotions = stats ? (Object.values(stats.emotionBreakdown || {}).reduce((a: any, b: any) => a + b, 0) as number) : 0
   const feedbackTotal = stats ? (stats.feedbackYes + stats.feedbackNo) : 0
+  const pendingApplications = users.filter(user => user.status === 'PENDING_APPROVAL')
 
   return (
-    <div className="flex flex-col min-h-svh">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-white sticky top-0 z-10">
-        <button className="text-lg">☰</button>
-        <span className="font-black text-lg tracking-tight">QuicKeys</span>
-        <button onClick={signOut} title="Sign out" className="text-sm text-gray-400 hover:text-black">↩</button>
+    <div className={`${styles.page} flex flex-col min-h-svh`}>
+      <div className={`${styles.topbar} flex items-center justify-between sticky top-0 z-10`}>
+        <button onClick={() => router.push('/feed')} className={styles.websiteLink} title="Return to QuiKeys website">← Website</button>
+        <div className={styles.topbarBrand}><span>QuiKeys™</span><small>Administration</small></div>
+        <button onClick={signOut} title="Sign out" className={styles.topbarSignout}>Sign out</button>
       </div>
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className={`${styles.shell} flex flex-1 overflow-hidden`}>
         {/* Sidebar */}
-        <div className="w-14 bg-black flex flex-col items-center py-4 gap-1.5 flex-shrink-0">
+        <aside className={`${styles.sidebar} flex flex-col flex-shrink-0`}>
+          <p className={styles.navLabel}>Workspace</p>
           {navItems.map(item => (
             <button key={item.id} onClick={() => setActiveTab(item.id)} title={item.label}
-              className={`w-9 h-9 rounded-lg flex items-center justify-center text-base transition-colors
-                ${activeTab === item.id ? 'bg-white/15 text-white' : 'text-white/40 hover:text-white/70'}`}>
-              {item.icon}
+              className={`${styles.navButton} ${activeTab === item.id ? styles.navActive : ''}`}>
+              <span className={styles.navIcon} aria-hidden="true">{item.icon}</span>
+              <span className={styles.navText}>{item.label}</span>
+              {item.id === 'applications' && pendingApplications.length > 0 && <span className={styles.navCount}>{pendingApplications.length}</span>}
             </button>
           ))}
-          <div className="flex-1" />
-          <button onClick={signOut} className="w-9 h-9 flex items-center justify-center text-white/30 hover:text-white/60" title="Sign out">
-            🚪
+          <div className={styles.navSpacer} />
+          <button onClick={signOut} className={`${styles.navButton} ${styles.sidebarSignout}`} title="Sign out">
+            <span className={styles.navIcon} aria-hidden="true">↪</span><span className={styles.navText}>Sign out</span>
           </button>
-        </div>
+        </aside>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto bg-gray-50 p-4">
+        <main className={`${styles.content} flex-1 overflow-y-auto`}>
           {loading ? (
             <div className="flex items-center justify-center py-20">
               <div className="w-6 h-6 border-2 border-black border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : loadError ? (
+            <div className="flex items-center justify-center py-20 text-sm text-red-600" role="alert">
+              {loadError}
             </div>
           ) : (
             <>
@@ -125,13 +165,14 @@ export default function AdminDashboardPage() {
                     <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Daily Snapshot</h2>
                     <div className="grid grid-cols-2 gap-2 mb-4">
                       {[
-                        { label: 'Total Users', value: (stats.totalUsers || 0).toLocaleString(), sub: `+${stats.newSignups || 0} this week`, pos: true, icon: '👤' },
-                        { label: 'Active Users', value: (stats.activeUsers || 0).toLocaleString(), sub: 'Currently active', pos: true, icon: '📈' },
-                        { label: 'Convs Started Today', value: (stats.convsStartedToday || 0).toLocaleString(), sub: 'New conversations', pos: null, icon: '💬' },
-                        { label: 'Pax Triggered Today', value: (stats.paxToday || 0).toLocaleString(), sub: `Close: ${stats.closeConvToday || 0} · Inactivity: ${stats.inactivityToday || 0}`, pos: null, icon: '🔑' },
-                        { label: 'Pending Reports', value: (stats.pendingReports || 0).toString(), sub: 'Needs review', pos: stats.pendingReports === 0, icon: '⚑' },
+                        { label: 'Total Users', value: (stats.totalUsers || 0).toLocaleString(), sub: `+${stats.newSignups || 0} this week`, pos: true, icon: '👤', tab: 'users' as Tab },
+                        { label: 'Pending Applications', value: pendingApplications.length.toString(), sub: 'Needs founder review', pos: pendingApplications.length === 0, icon: '✓', tab: 'applications' as Tab },
+                        { label: 'Active Users', value: (stats.activeUsers || 0).toLocaleString(), sub: 'Currently active', pos: true, icon: '📈', tab: 'users' as Tab },
+                        { label: 'Convs Started Today', value: (stats.convsStartedToday || 0).toLocaleString(), sub: 'View participating users', pos: null, icon: '💬', tab: 'users' as Tab },
+                        { label: 'Pax Triggered Today', value: (stats.paxToday || 0).toLocaleString(), sub: `Close: ${stats.closeConvToday || 0} · Inactivity: ${stats.inactivityToday || 0}`, pos: null, icon: '🔑', tab: 'pax' as Tab },
+                        { label: 'Pending Reports', value: (stats.pendingReports || 0).toString(), sub: 'Needs review', pos: stats.pendingReports === 0, icon: '⚑', tab: 'reports' as Tab },
                       ].map(m => (
-                        <div key={m.label} className="bg-white border border-gray-200 rounded-xl p-3 flex justify-between items-start">
+                        <button type="button" key={m.label} onClick={() => setActiveTab(m.tab)} className="group bg-white border border-gray-200 rounded-xl p-3 flex justify-between items-start text-left cursor-pointer transition-all hover:-translate-y-0.5 hover:border-amber-300 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2" aria-label={`${m.label}: ${m.value}. Open ${m.tab}.`}>
                           <div>
                             <div className="text-xs text-gray-500 mb-1">{m.label}</div>
                             <div className="text-2xl font-black tracking-tight">{m.value}</div>
@@ -139,8 +180,8 @@ export default function AdminDashboardPage() {
                               {m.sub}
                             </div>
                           </div>
-                          <span className="text-gray-300 text-lg">{m.icon}</span>
-                        </div>
+                          <span className="flex items-center gap-2 text-gray-300 text-lg"><span className="text-[10px] font-bold uppercase tracking-wider text-amber-600 opacity-0 transition-opacity group-hover:opacity-100">Open</span>{m.icon}</span>
+                        </button>
                       ))}
                     </div>
                   </div>
@@ -176,6 +217,46 @@ export default function AdminDashboardPage() {
                           {new Date(u.created_at).toLocaleDateString()}
                         </div>
                       </div>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {activeTab === 'applications' && (
+                <>
+                  <div className="mb-4">
+                    <h1 className="text-xl font-black tracking-tight">Beta Applications</h1>
+                    <p className="text-xs text-gray-500">Approve eligible applicants for the controlled V1 beta.</p>
+                  </div>
+                  <div className="grid gap-3 max-w-4xl">
+                    {pendingApplications.length === 0 && (
+                      <div className="bg-white border border-gray-200 rounded-xl p-8 text-center text-gray-400 text-sm">No applications are waiting for review.</div>
+                    )}
+                    {pendingApplications.map(applicant => (
+                      <article key={applicant.id} className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+                        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <div className="w-9 h-9 rounded-full bg-gray-100 grid place-items-center font-bold">{(applicant.first_name || applicant.email || '?').charAt(0).toUpperCase()}</div>
+                              <div>
+                                <h2 className="font-bold text-sm">{applicant.first_name || 'Profile not started'}</h2>
+                                <p className="text-xs text-gray-500">{applicant.email}</p>
+                              </div>
+                            </div>
+                            <dl className="grid sm:grid-cols-2 gap-x-8 gap-y-2 mt-4 text-xs">
+                              <div><dt className="text-gray-400">Eligibility</dt><dd className="font-semibold text-green-700">18+ confirmed</dd></div>
+                              <div><dt className="text-gray-400">Email</dt><dd className="font-semibold text-green-700">Verified</dd></div>
+                              <div><dt className="text-gray-400">Terms & Privacy</dt><dd className="font-semibold">Accepted</dd></div>
+                              <div><dt className="text-gray-400">Submitted</dt><dd className="font-semibold">{applicant.application_submitted_at ? new Date(applicant.application_submitted_at).toLocaleString() : 'Not recorded'}</dd></div>
+                            </dl>
+                          </div>
+                          <span className="self-start text-[11px] px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 font-bold">Pending review</span>
+                        </div>
+                        <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-gray-100">
+                          <button onClick={() => { if (confirm(`Approve ${applicant.email} for the 30-day QuiKeys beta?`)) modUser(applicant.id, 'APPROVE') }} className="px-4 py-2 rounded-lg bg-black text-white text-xs font-bold">Approve for Beta</button>
+                          <button onClick={() => { const reason = prompt('Internal rejection reason:'); if (reason?.trim()) modUser(applicant.id, 'REJECT', reason) }} className="px-4 py-2 rounded-lg border border-red-200 text-red-600 text-xs font-bold">Reject</button>
+                        </div>
+                      </article>
                     ))}
                   </div>
                 </>
@@ -442,7 +523,7 @@ export default function AdminDashboardPage() {
               )}
             </>
           )}
-        </div>
+        </main>
       </div>
     </div>
   )

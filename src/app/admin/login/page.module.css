@@ -1,0 +1,48 @@
+.page {
+  position: relative;
+  min-height: 100svh;
+  padding: clamp(24px, 5vw, 68px);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  color: #fff;
+  background:
+    linear-gradient(rgba(2, 9, 10, .78), rgba(2, 13, 15, .94)),
+    radial-gradient(circle at 75% 20%, rgba(13, 158, 166, .22), transparent 34%),
+    linear-gradient(145deg, #02090a, #061b1e 54%, #021415);
+}
+
+.ambientOne,.ambientTwo { position:absolute; width:420px; height:420px; border-radius:50%; filter:blur(90px); pointer-events:none; }
+.ambientOne { top:-220px; right:-130px; background:rgba(13,158,166,.18); }
+.ambientTwo { bottom:-260px; left:-150px; background:rgba(217,155,52,.11); }
+.backLink { position:absolute; top:clamp(22px,4vw,42px); left:clamp(22px,4vw,52px); color:rgba(255,255,255,.58); font-size:13px; text-decoration:none; transition:color .18s ease,transform .18s ease; }
+.backLink:hover { color:#66f6ff; transform:translateX(-2px); }
+
+.card { position:relative; z-index:1; width:min(100%,500px); padding:clamp(30px,5vw,48px); border:1px solid rgba(217,155,52,.46); border-radius:28px; background:linear-gradient(145deg,rgba(5,31,34,.96),rgba(2,17,19,.98)); box-shadow:0 34px 90px rgba(0,0,0,.55),inset 0 1px rgba(255,255,255,.04); }
+.header { display:flex; flex-direction:column; align-items:center; text-align:center; }
+.portalBadge { margin:22px 0 14px; padding:6px 12px; border:1px solid rgba(13,183,191,.38); border-radius:999px; color:#66f6ff; background:rgba(13,158,166,.09); font-size:10px; font-weight:800; letter-spacing:.14em; text-transform:uppercase; }
+.header h1 { margin:0; color:#ffc766; font:500 clamp(30px,6vw,42px)/1.1 "Playfair Display",Georgia,serif; }
+.header p { max-width:360px; margin:11px 0 0; color:rgba(255,255,255,.61); font-size:14px; line-height:1.55; }
+
+.form { margin-top:30px; display:grid; gap:18px; }
+.field { display:grid; gap:8px; }
+.field label { color:rgba(255,231,177,.84); font-size:11px; font-weight:800; letter-spacing:.09em; text-transform:uppercase; }
+.inputWrap { position:relative; display:flex; align-items:center; }
+.inputWrap>svg { position:absolute; left:16px; width:19px; height:19px; fill:none; stroke:#d99b34; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round; pointer-events:none; }
+.inputWrap input { width:100%; height:54px; padding:0 68px 0 48px; border:1px solid rgba(217,155,52,.3); border-radius:14px; outline:none; background:rgba(1,12,13,.72); color:#fff; font:inherit; font-size:14px; transition:border-color .18s ease,box-shadow .18s ease,background .18s ease; }
+.inputWrap input::placeholder { color:rgba(255,255,255,.28); }
+.inputWrap input:focus { border-color:#0fb7bf; background:rgba(2,22,24,.9); box-shadow:0 0 0 3px rgba(13,183,191,.12); }
+.visibility { position:absolute; right:14px; min-width:42px; padding:7px; border:0; background:transparent; color:rgba(102,246,255,.62); font-size:11px; font-weight:700; cursor:pointer; }
+.visibility:hover { color:#66f6ff; }
+.error { margin:-2px 0 0; padding:11px 13px; border:1px solid rgba(255,107,107,.32); border-radius:11px; background:rgba(126,25,25,.15); color:#ffabab; font-size:12px; line-height:1.4; }
+.submit { width:min(100%,320px); min-height:52px; margin:4px auto 0; padding:0 22px; display:flex; align-items:center; justify-content:center; gap:18px; border:1px solid #ffc766; border-radius:999px; background:linear-gradient(135deg,#ffe0a0,#d99b34); color:#061315; font:800 14px/1 inherit; cursor:pointer; box-shadow:0 10px 28px rgba(217,155,52,.18); transition:transform .18s ease,box-shadow .18s ease; }
+.submit:hover:not(:disabled) { transform:translateY(-1px); box-shadow:0 13px 34px rgba(217,155,52,.28); }
+.submit:disabled { opacity:.58; cursor:not-allowed; }
+.footer { margin-top:28px; padding-top:22px; display:flex; justify-content:center; gap:10px; border-top:1px solid rgba(217,155,52,.16); color:rgba(255,255,255,.42); }
+.footer p { margin:0; font-size:11px; line-height:1.5; }
+.footer strong { color:rgba(255,255,255,.65); }
+.lock { color:#d99b34; font-size:19px; }
+
+@media(max-width:600px){.page{padding:76px 16px 24px;align-items:start}.card{padding:30px 21px;border-radius:22px}.backLink{top:24px}.header p{font-size:13px}.form{margin-top:26px}.inputWrap input{height:52px}.footer{justify-content:flex-start}}
+@media(max-height:720px) and (min-width:601px){.page{padding-block:28px}.card{padding-block:28px}.portalBadge{margin-top:14px}.form{margin-top:22px}.footer{margin-top:20px;padding-top:16px}}
+@media(prefers-reduced-motion:reduce){.backLink,.submit{transition:none}}

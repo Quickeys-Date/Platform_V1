@@ -50,18 +50,22 @@ export default function SignInPage() {
 
       const { data: profile } = await supabase
         .from('profiles')
-        .select('profile_complete, pax_onboarded, role')
+        .select('status, age_confirmed_at, profile_complete, pax_onboarded, role')
         .eq('id', data.user.id)
         .single()
 
       if (!profile) {
-        window.location.href = '/onboarding/profile'
-      } else if (profile.role === 'ADMIN') {
-        window.location.href = '/admin/dashboard'
+        window.location.href = '/auth/age-verification'
+      } else if (profile.role === 'ADMIN' && profile.status === 'ACTIVE') {
+        window.location.href = '/feed'
+      } else if (profile.status === 'PENDING_EMAIL') {
+        window.location.href = '/auth/age-verification'
+      } else if (profile.status !== 'ACTIVE') {
+        window.location.href = '/auth/pending-approval'
       } else if (!profile.profile_complete) {
-        window.location.href = '/onboarding/profile'
+        window.location.href = '/onboarding/welcome'
       } else if (!profile.pax_onboarded) {
-        window.location.href = '/onboarding/pax'
+        window.location.href = '/onboarding/welcome'
       } else {
         window.location.href = '/feed'
       }
@@ -80,7 +84,7 @@ export default function SignInPage() {
         <div className="signin-logo">
           <Image
             src="/quickeys-icon.png"
-            alt="QuicKeys"
+            alt="QuiKeys"
             width={84}
             height={84}
             priority
@@ -91,7 +95,7 @@ export default function SignInPage() {
           <h1>Welcome back</h1>
 
           <p>
-            Log in to continue your QuicKeys journey
+            Log in to continue your QuiKeys journey
           </p>
         </header>
 
@@ -196,7 +200,7 @@ export default function SignInPage() {
         </form>
 
         <p className="signin-signup">
-          New to QuicKeys?{' '}
+          New to QuiKeys?{' '}
           <Link href="/auth/signup">
             Create your account
           </Link>

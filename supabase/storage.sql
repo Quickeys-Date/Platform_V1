@@ -1,5 +1,5 @@
 -- ============================================================
--- QuicKeys™ — Supabase Storage Setup
+-- QuiKeys™ — Supabase Storage Setup
 -- Run this AFTER schema.sql in Supabase SQL Editor
 -- ============================================================
 

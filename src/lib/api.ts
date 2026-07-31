@@ -38,5 +38,26 @@ export async function apiFetch(url: string, options: RequestInit = {}): Promise<
     headers['Authorization'] = `Bearer ${token}`
   }
 
-  return fetch(url, { ...options, headers })
+  const controller = new AbortController()
+  // Development can spend several seconds compiling a newly edited API route.
+  // Allow that first compilation to finish instead of showing a false network
+  // error; production requests still fail fast when the service is unavailable.
+  const requestTimeout = process.env.NODE_ENV === 'development' ? 45000 : 12000
+  const timeout = window.setTimeout(() => controller.abort(), requestTimeout)
+
+  if (options.signal) {
+    if (options.signal.aborted) controller.abort()
+    else options.signal.addEventListener('abort', () => controller.abort(), { once: true })
+  }
+
+  try {
+    return await fetch(url, {
+      ...options,
+      headers,
+      credentials: 'same-origin',
+      signal: controller.signal,
+    })
+  } finally {
+    window.clearTimeout(timeout)
+  }
 }

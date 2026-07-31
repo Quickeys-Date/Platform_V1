@@ -17,7 +17,7 @@ export function QuicKeysLogo({ size = 'md', showWordmark = true, showTagline = f
       <div style={{ width: iconSize, height: iconSize, borderRadius: '50%', overflow: 'hidden', position: 'relative' }}>
         <Image
           src="/quickeys-icon.png"
-          alt="QuicKeys"
+          alt="QuiKeys"
           width={iconSize}
           height={iconSize}
           style={{ objectFit: 'cover', width: '100%', height: '100%' }}
@@ -39,7 +39,7 @@ export function QuicKeysLogo({ size = 'md', showWordmark = true, showTagline = f
             display: 'block',
             lineHeight: 1.1,
           }}>
-            QuicKeys™
+            QuiKeys™
           </span>
           {showTagline && (
             <span style={{

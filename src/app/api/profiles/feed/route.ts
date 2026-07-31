@@ -6,19 +6,37 @@ export async function GET() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { data: me } = await supabase
-    .from('profiles')
-    .select('gender, interested_in, age_range_min, age_range_max, location_radius, city, state, date_of_birth')
-    .eq('id', user.id).single()
+  const [meResult, conversationsResult, requestsResult, blocksResult] = await Promise.all([
+    supabase
+      .from('profiles')
+      .select('first_name, photos, gender, interested_in, age_range_min, age_range_max, location_radius, city, state, date_of_birth')
+      .eq('id', user.id)
+      .single(),
+    supabase
+      .from('conversations')
+      .select('initiator_id, recipient_id')
+      .or(`initiator_id.eq.${user.id},recipient_id.eq.${user.id}`),
+    supabase
+      .from('connection_requests')
+      .select('sender_id, recipient_id')
+      .or(`sender_id.eq.${user.id},recipient_id.eq.${user.id}`)
+      .eq('status', 'PENDING'),
+    supabase
+      .from('user_blocks')
+      .select('blocker_id, blocked_id')
+      .or(`blocker_id.eq.${user.id},blocked_id.eq.${user.id}`),
+  ])
+
+  const me = meResult.data
 
   if (!me) return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
 
-  const { data: existingConvs } = await supabase
-    .from('conversations').select('initiator_id, recipient_id')
-    .or(`initiator_id.eq.${user.id},recipient_id.eq.${user.id}`)
+  const existingConvs = conversationsResult.data
 
   const excludeIds = new Set([user.id])
   existingConvs?.forEach(c => { excludeIds.add(c.initiator_id); excludeIds.add(c.recipient_id) })
+  requestsResult.data?.forEach(r => { excludeIds.add(r.sender_id); excludeIds.add(r.recipient_id) })
+  blocksResult.data?.forEach(b => { excludeIds.add(b.blocker_id); excludeIds.add(b.blocked_id) })
   const excludeList = Array.from(excludeIds)
 
   let query = supabase.from('profiles')
@@ -39,5 +57,8 @@ export async function GET() {
     .map(p => ({ ...p, age: p.date_of_birth ? Math.floor((now - new Date(p.date_of_birth).getTime()) / (365.25 * 24 * 3600000)) : 25 }))
     .filter(p => p.age >= (me.age_range_min || 18) && p.age <= (me.age_range_max || 45))
 
-  return NextResponse.json({ profiles: filtered.sort(() => Math.random() - 0.5).slice(0, 5) })
+  return NextResponse.json({
+    profiles: filtered.sort(() => Math.random() - 0.5).slice(0, 5),
+    viewer: { first_name: me.first_name, photos: me.photos || [] },
+  })
 }

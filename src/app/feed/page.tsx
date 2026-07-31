@@ -1,32 +1,53 @@
 'use client'
 
-import {
-  useCallback,
-  useEffect,
-  useState,
-} from 'react'
-import type {
-  Conversation,
-  Profile,
-} from '@/lib/types'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import type { Conversation, Profile } from '@/lib/types'
 import { BottomNav } from '@/components/BottomNav'
 import { ProfileCard } from '@/components/ProfileCard'
 import { QuicKeysLogo } from '@/components/QuicKeysLogo'
+import { PhotoDisplay } from '@/components/PhotoDisplay'
 import { apiFetch } from '@/lib/api'
 
-type LoadState =
-  | 'checking'
-  | 'ready'
-  | 'redirecting'
+const FEED_CACHE_KEY = 'quikeys-feed-cache-v1'
+const FEED_CACHE_TTL = 5 * 60 * 1000
+
+type FeedCache = {
+  profiles: Profile[]
+  activeConvs: Conversation[]
+  viewer: { first_name: string; photos: string[] } | null
+  currentIndex: number
+  savedAt: number
+}
 
 export default function FeedPage() {
-  const [loadState, setLoadState] =
-    useState<LoadState>('checking')
-
+  const [redirecting, setRedirecting] = useState(false)
   const [profiles, setProfiles] = useState<Profile[]>([])
-  const [activeConvs, setActiveConvs] =
-    useState<Conversation[]>([])
+  const [activeConvs, setActiveConvs] = useState<Conversation[]>([])
   const [feedLoading, setFeedLoading] = useState(true)
+  const [feedError, setFeedError] = useState('')
+  const [currentIndex, setCurrentIndex] = useState(0)
+  const [quiKeyOpen, setQuiKeyOpen] = useState(false)
+  const [quiKeyAnswer, setQuiKeyAnswer] = useState('')
+  const [requestSending, setRequestSending] = useState(false)
+  const [requestMessage, setRequestMessage] = useState('')
+  const [viewer, setViewer] = useState<{ first_name: string; photos: string[] } | null>(null)
+  const [safetyMenuOpen, setSafetyMenuOpen] = useState(false)
+  const [blockConfirmOpen, setBlockConfirmOpen] = useState(false)
+  const [blocking, setBlocking] = useState(false)
+  const requestMessageTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const showTemporaryRequestMessage = useCallback((message: string) => {
+    if (requestMessageTimer.current) clearTimeout(requestMessageTimer.current)
+    setRequestMessage(message)
+    requestMessageTimer.current = setTimeout(() => {
+      setRequestMessage('')
+      requestMessageTimer.current = null
+    }, 1000)
+  }, [])
+
+  useEffect(() => () => {
+    if (requestMessageTimer.current) clearTimeout(requestMessageTimer.current)
+  }, [])
 
   useEffect(() => {
     const checkInactivity = async () => {
@@ -34,247 +55,209 @@ export default function FeedPage() {
         const response = await apiFetch('/api/pax')
         const data = await response.json()
         const pending = data.triggers || []
-
-        if (pending.length > 0) {
-          const ids = pending
-            .map((trigger: any) => trigger.id)
-            .join(',')
-
-          setLoadState('redirecting')
-
-          window.location.href =
-            `/pax/checkin?triggers=${encodeURIComponent(ids)}` +
-            '&index=0&type=INACTIVITY'
-
-          return
+        if (pending.length) {
+          setRedirecting(true)
+          const ids = pending.map((trigger: { id: string }) => trigger.id).join(',')
+          window.location.href = `/pax/checkin?triggers=${encodeURIComponent(ids)}&index=0&type=INACTIVITY`
         }
-      } catch {
-        // Continue loading the feed if the Pax check fails.
-      }
-
-      setLoadState('ready')
+      } catch { /* The feed remains usable if the optional Pax check fails. */ }
     }
-
     checkInactivity()
   }, [])
 
-  const loadFeed = useCallback(async () => {
-    setFeedLoading(true)
-
+  const loadFeed = useCallback(async ({ background = false, preserveProfileId = '' }: { background?: boolean; preserveProfileId?: string } = {}) => {
+    if (!background) setFeedLoading(true)
+    setFeedError('')
     try {
-      const [conversationResponse, feedResponse] =
-        await Promise.all([
-          apiFetch('/api/conversations?status=active'),
-          apiFetch('/api/profiles/feed'),
-        ])
-
-      const [conversationData, feedData] =
-        await Promise.all([
-          conversationResponse.json(),
-          feedResponse.json(),
-        ])
-
-      setActiveConvs(
-        conversationData.conversations || []
-      )
-      setProfiles(feedData.profiles || [])
+      // Conversation counts are secondary. Never hold the profile card behind
+      // that request, which can be slower when returning from another page.
+      const conversationPromise = apiFetch('/api/conversations?status=active')
+        .then(async response => response.ok ? (await response.json()).conversations || [] : [])
+        .catch(() => [] as Conversation[])
+      const feedResponse = await apiFetch('/api/profiles/feed')
+      if (feedResponse.status === 401) {
+        window.location.href = '/auth/signin'
+        return
+      }
+      if (!feedResponse.ok) throw new Error('Unable to load connections')
+      const feedData = await feedResponse.json()
+      const nextProfiles = feedData.profiles || []
+      const nextViewer = feedData.viewer || null
+      const preservedIndex = preserveProfileId
+        ? Math.max(0, nextProfiles.findIndex((profile: Profile) => profile.id === preserveProfileId))
+        : 0
+      setProfiles(nextProfiles)
+      setViewer(nextViewer)
+      setCurrentIndex(preservedIndex)
+      sessionStorage.setItem(FEED_CACHE_KEY, JSON.stringify({
+        profiles: nextProfiles,
+        activeConvs: [],
+        viewer: nextViewer,
+        currentIndex: preservedIndex,
+        savedAt: Date.now(),
+      } satisfies FeedCache))
+      void conversationPromise.then(conversations => setActiveConvs(conversations))
+    } catch {
+      if (!background) setFeedError('We could not load your connections. Please try again.')
     } finally {
-      setFeedLoading(false)
+      if (!background) setFeedLoading(false)
     }
   }, [])
 
   useEffect(() => {
-    if (loadState === 'ready') {
-      loadFeed()
-    }
-  }, [loadState, loadFeed])
-
-  const startConversation = async (
-    profileId: string
-  ) => {
-    const response = await apiFetch(
-      '/api/conversations',
-      {
-        method: 'POST',
-        body: JSON.stringify({
-          recipient_id: profileId,
-        }),
+    if (redirecting) return
+    let restored = false
+    let preservedProfileId = ''
+    try {
+      const rawCache = sessionStorage.getItem(FEED_CACHE_KEY)
+      if (rawCache) {
+        const cache = JSON.parse(rawCache) as FeedCache
+        if (Date.now() - cache.savedAt < FEED_CACHE_TTL && cache.profiles.length) {
+          setProfiles(cache.profiles)
+          setActiveConvs(cache.activeConvs || [])
+          setViewer(cache.viewer || null)
+          setCurrentIndex(Math.min(cache.currentIndex || 0, cache.profiles.length - 1))
+          preservedProfileId = cache.profiles[Math.min(cache.currentIndex || 0, cache.profiles.length - 1)]?.id || ''
+          setFeedLoading(false)
+          restored = true
+        }
       }
-    )
-
-    const data = await response.json()
-
-    if (data.conversation) {
-      window.location.href =
-        `/chat/${data.conversation.id}`
+    } catch {
+      sessionStorage.removeItem(FEED_CACHE_KEY)
     }
+    loadFeed({ background: restored, preserveProfileId: preservedProfileId })
+  }, [redirecting, loadFeed])
+
+  useEffect(() => {
+    if (feedLoading || !profiles.length) return
+    try {
+      sessionStorage.setItem(FEED_CACHE_KEY, JSON.stringify({
+        profiles,
+        activeConvs,
+        viewer,
+        currentIndex,
+        savedAt: Date.now(),
+      } satisfies FeedCache))
+    } catch { /* The feed still works when browser storage is unavailable. */ }
+  }, [profiles, activeConvs, viewer, currentIndex, feedLoading])
+
+  const sendConnectionRequest = async (profileId: string, requestType: 'STANDARD' | 'QUIKEY', promptAnswer = '') => {
+    setRequestSending(true)
+    setRequestMessage('')
+    const response = await apiFetch('/api/connection-requests', {
+      method: 'POST',
+      body: JSON.stringify({ recipient_id: profileId, request_type: requestType, prompt_answer: promptAnswer }),
+    })
+    const data = await response.json()
+    setRequestSending(false)
+    if (!response.ok) {
+      setRequestMessage(data.error || 'Unable to send your request. Please try again.')
+      return
+    }
+    setQuiKeyOpen(false)
+    setQuiKeyAnswer('')
+    showTemporaryRequestMessage(requestType === 'QUIKEY' ? 'Your thoughtful QuiKey was sent.' : 'Your connection request was sent.')
+    setCurrentIndex(index => index + 1)
   }
 
-  if (
-    loadState === 'checking' ||
-    loadState === 'redirecting'
-  ) {
-    return (
-      <div className="feed-loading-page">
-        <div className="feed-loading-spinner" />
-      </div>
-    )
+  const blockProfile = async (profileId: string) => {
+    setBlocking(true)
+    const response = await apiFetch('/api/blocks', { method: 'POST', body: JSON.stringify({ blocked_id: profileId }) })
+    const data = await response.json()
+    setBlocking(false)
+    if (!response.ok) { setRequestMessage(data.error || 'Unable to block this profile.'); return }
+    setBlockConfirmOpen(false)
+    setSafetyMenuOpen(false)
+    setRequestMessage('Profile blocked. You will no longer see each other.')
+    setCurrentIndex(index => index + 1)
   }
+
+  if (redirecting) return <div className="feed-loading-page"><div className="feed-loading-spinner" /></div>
+  const currentProfile = profiles[currentIndex]
 
   return (
     <main className="feed-page">
       <header className="feed-header">
         <div className="feed-header-inner">
-          <QuicKeysLogo
-            size="sm"
-            showWordmark
-          />
-
-          <button
-            type="button"
-            className="feed-profile-button"
-            aria-label="Open my profile"
-            onClick={() => {
-              window.location.href = '/me'
-            }}
-          >
-            ◎
+          <QuicKeysLogo size="sm" showWordmark />
+          <button type="button" className="feed-profile-button" aria-label="Open my profile" onClick={() => window.location.href = '/me'}>
+            {viewer?.photos?.length ? <PhotoDisplay photos={viewer.photos} size={38} className="feed-profile-photo" /> : <span>{viewer?.first_name?.[0]?.toUpperCase() || 'P'}</span>}
           </button>
         </div>
       </header>
 
       <div className="feed-scroll-area">
         <div className="feed-content">
-          {activeConvs.length > 0 && (
-            <section className="feed-section">
-              <h2 className="feed-section-title">
-                Active conversations
-              </h2>
-
-              <div className="feed-conversation-grid">
-                {activeConvs.map((conversation) => {
-                  const other =
-                    conversation.other_profile as any
-
-                  const message =
-                    conversation.last_message
-                      ? (
-                          conversation.last_message as any
-                        ).content?.slice(0, 40) + '…'
-                      : 'Say hello!'
-
-                  return (
-                    <article
-                      key={conversation.id}
-                      className="feed-conversation-card"
-                    >
-                      <button
-                        type="button"
-                        className="feed-conversation-profile"
-                        onClick={() => {
-                          window.location.href =
-                            `/profile/${other?.id}`
-                        }}
-                      >
-                        <span className="feed-conversation-avatar">
-                          {other?.first_name?.[0] || '?'}
-                        </span>
-
-                        <span className="feed-conversation-copy">
-                          <span className="feed-conversation-name">
-                            {other?.first_name}
-                          </span>
-
-                          <span className="feed-conversation-message">
-                            {message}
-                          </span>
-                        </span>
-                      </button>
-
-                      <button
-                        type="button"
-                        className="feed-chat-button"
-                        aria-label={`Message ${
-                          other?.first_name || 'connection'
-                        }`}
-                        onClick={() => {
-                          window.location.href =
-                            `/chat/${conversation.id}`
-                        }}
-                      >
-                        💬
-                      </button>
-                    </article>
-                  )
-                })}
-              </div>
-            </section>
-          )}
-
-          <section className="feed-section">
-            <h2 className="feed-section-title">
-              New connections
-            </h2>
+          <section className="feed-section discover-section">
+            <div className="discover-heading">
+              <div><p>Discover</p><h1>One meaningful connection at a time.</h1></div>
+              {activeConvs.length > 0 && <button type="button" onClick={() => window.location.href = '/messages'}>Messages <span>{activeConvs.length}</span></button>}
+            </div>
+            {requestMessage && <p className="discover-request-message" role="status">{requestMessage}</p>}
 
             {feedLoading ? (
-              <div className="feed-profile-grid">
-                {[1, 2, 3, 4].map((item) => (
-                  <div
-                    key={item}
-                    className="feed-profile-skeleton"
-                  />
-                ))}
+              <div className="discover-stage discover-loading" role="status">
+                <div className="feed-profile-skeleton" />
+                <p>Finding a meaningful connection…</p>
               </div>
-            ) : profiles.length === 0 ? (
-              <div className="feed-empty">
-                <div className="feed-empty-icon">
-                  🌐
-                </div>
-
-                <h3>
-                  No connections available right now.
-                </h3>
-
-                <p>Check back soon.</p>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    window.location.href = '/me'
-                  }}
-                >
-                  Expand your filters
-                </button>
-              </div>
+            ) : feedError ? (
+              <div className="feed-empty" role="alert"><h3>Connections unavailable</h3><p>{feedError}</p><button type="button" onClick={() => loadFeed()}>Try again</button></div>
+            ) : !currentProfile ? (
+              <div className="feed-empty"><div className="feed-empty-icon">⌕</div><h3>{profiles.length ? 'You have seen everyone for now.' : 'No connections available right now.'}</h3><p>Check back soon.</p><button type="button" onClick={profiles.length ? () => loadFeed() : () => window.location.href = '/me'}>{profiles.length ? 'Review profiles again' : 'Expand your filters'}</button></div>
             ) : (
-              <>
-                {profiles.length < 5 && (
-                  <p className="feed-more-message">
-                    More connections coming soon.
-                  </p>
-                )}
-
-                <div className="feed-profile-grid">
-                  {profiles.map((profile) => (
-                    <ProfileCard
-                      key={profile.id}
-                      profile={profile}
-                      onViewProfile={() => {
-                        window.location.href =
-                          `/profile/${profile.id}`
-                      }}
-                      onStartChat={() =>
-                        startConversation(profile.id)
-                      }
-                    />
-                  ))}
-                </div>
-              </>
+              <div className="discover-stage">
+                <ProfileCard
+                  key={currentProfile.id}
+                  profile={currentProfile}
+                  onViewProfile={() => window.location.href = `/profile/${currentProfile.id}`}
+                  onPass={() => setCurrentIndex(index => index + 1)}
+                  onConnect={() => sendConnectionRequest(currentProfile.id, 'STANDARD')}
+                  onQuiKey={() => { setRequestMessage(''); setQuiKeyOpen(true) }}
+                  onMenu={() => setSafetyMenuOpen(true)}
+                />
+              </div>
             )}
           </section>
         </div>
       </div>
-
+      {quiKeyOpen && currentProfile && (
+        <div className="quikey-modal-backdrop" role="presentation" onMouseDown={() => !requestSending && setQuiKeyOpen(false)}>
+          <section className="quikey-modal" role="dialog" aria-modal="true" aria-labelledby="quikey-title" onMouseDown={event => event.stopPropagation()}>
+            <button type="button" className="quikey-modal-close" onClick={() => setQuiKeyOpen(false)} aria-label="Close">×</button>
+            <span className="quikey-modal-icon" aria-hidden="true">⚿</span>
+            <p className="quikey-modal-eyebrow">Send a QuiKey to {currentProfile.first_name}</p>
+            <h2 id="quikey-title">Start with intention.</h2>
+            <label htmlFor="quikey-answer">What is something you are genuinely looking forward to?</label>
+            <textarea id="quikey-answer" value={quiKeyAnswer} onChange={event => setQuiKeyAnswer(event.target.value)} maxLength={300} rows={4} placeholder="Share a thoughtful, honest answer…" autoFocus />
+            <small>{quiKeyAnswer.length}/300</small>
+            <button type="button" className="quikey-modal-send" disabled={!quiKeyAnswer.trim() || requestSending} onClick={() => sendConnectionRequest(currentProfile.id, 'QUIKEY', quiKeyAnswer)}>{requestSending ? 'Sending…' : 'Send QuiKey'}</button>
+            {requestMessage && <p className="quikey-modal-error" role="alert">{requestMessage}</p>}
+          </section>
+        </div>
+      )}
+      {safetyMenuOpen && currentProfile && (
+        <div className="profile-safety-backdrop" onMouseDown={() => setSafetyMenuOpen(false)}>
+          <section className="profile-safety-menu" role="dialog" aria-modal="true" aria-labelledby="safety-title" onMouseDown={event => event.stopPropagation()}>
+            <button type="button" className="profile-safety-close" onClick={() => setSafetyMenuOpen(false)} aria-label="Close">×</button>
+            <p>Safety options</p>
+            <h2 id="safety-title">What would you like to do?</h2>
+            <button type="button" className="profile-safety-option" onClick={() => window.location.href = `/report?reported_id=${currentProfile.id}&source=Connection+Profile`}><strong>Report profile</strong><span>Tell the QuiKeys safety team what happened.</span></button>
+            <button type="button" className="profile-safety-option is-danger" onClick={() => { setSafetyMenuOpen(false); setBlockConfirmOpen(true) }}><strong>Block {currentProfile.first_name}</strong><span>You will be hidden from each other.</span></button>
+            <button type="button" className="profile-safety-cancel" onClick={() => setSafetyMenuOpen(false)}>Cancel</button>
+          </section>
+        </div>
+      )}
+      {blockConfirmOpen && currentProfile && (
+        <div className="profile-safety-backdrop" onMouseDown={() => !blocking && setBlockConfirmOpen(false)}>
+          <section className="profile-safety-menu profile-block-confirm" role="alertdialog" aria-modal="true" aria-labelledby="block-title" onMouseDown={event => event.stopPropagation()}>
+            <span className="profile-block-icon" aria-hidden="true">!</span>
+            <h2 id="block-title">Block {currentProfile.first_name}?</h2>
+            <p className="profile-block-copy">You will no longer see each other, exchange requests, or send messages. They will not be notified.</p>
+            <button type="button" className="profile-block-button" disabled={blocking} onClick={() => blockProfile(currentProfile.id)}>{blocking ? 'Blocking…' : 'Yes, block profile'}</button>
+            <button type="button" className="profile-safety-cancel" disabled={blocking} onClick={() => setBlockConfirmOpen(false)}>Cancel</button>
+          </section>
+        </div>
+      )}
       <BottomNav active="feed" />
     </main>
   )

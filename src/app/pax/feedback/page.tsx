@@ -10,6 +10,7 @@ function FeedbackContent() {
   const triggersParam = params.get('triggers') || ''
   const indexParam = parseInt(params.get('index') || '0', 10)
   const triggerType = params.get('type') || 'CLOSE_CONVERSATION'
+  const stateId = params.get('state') || 'PAX_NEUTRAL'
   const [rating, setRating] = useState<string | null>(null)
   const [openText, setOpenText] = useState('')
   const [saving, setSaving] = useState(false)
@@ -25,10 +26,20 @@ function FeedbackContent() {
     router.push(`/pax/thankyou?triggers=${encodeURIComponent(triggersParam)}&index=${indexParam}&type=${triggerType}`)
   }
 
+  const changeEmotion = () => {
+    const previous = new URLSearchParams()
+    previous.set('state', stateId)
+    previous.set('trigger_id', triggerId)
+    previous.set('type', triggerType)
+    if (triggersParam) previous.set('triggers', triggersParam)
+    previous.set('index', String(indexParam))
+    router.push(`/pax/checkin?${previous.toString()}`)
+  }
+
   return (
     <div className="pax-screen animate-fade-up">
       {/* CR#17: Back button */}
-      <button onClick={() => router.back()} style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13, marginBottom: 8, background: 'none', border: 'none', cursor: 'pointer' }}>← Back</button>
+      <button onClick={changeEmotion} style={{ color: 'rgba(255,255,255,0.55)', fontSize: 13, marginBottom: 8, background: 'none', border: 'none', cursor: 'pointer' }}>← Change emotion</button>
 
       <div style={{ fontWeight: 900, fontSize: 18, color: '#FFC766', marginBottom: 24 }}>Pax™</div>
 
@@ -61,10 +72,7 @@ function FeedbackContent() {
         )}
       </div>
 
-      <button onClick={submit} disabled={saving} style={{
-        width: '100%', padding: 16, borderRadius: 14, fontWeight: 700, fontSize: 15, marginTop: 16,
-        background: 'white', color: '#0A0A0A', border: 'none', cursor: 'pointer', opacity: saving ? 0.6 : 1,
-      }}>
+      <button className="pax-flow-primary" onClick={submit} disabled={saving}>
         {saving ? 'Saving…' : 'Continue'}
       </button>
     </div>

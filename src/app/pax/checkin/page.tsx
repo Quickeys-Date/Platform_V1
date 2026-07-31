@@ -7,7 +7,7 @@ import { apiFetch } from '@/lib/api'
 function CheckinContent() {
   const router = useRouter()
   const params = useSearchParams()
-  const [selected, setSelected] = useState<string | null>(null)
+  const [selected, setSelected] = useState<string | null>(params.get('state'))
   const [saving, setSaving] = useState(false)
 
   const triggerType = params.get('type') || 'CLOSE_CONVERSATION'
@@ -68,7 +68,7 @@ function CheckinContent() {
         ))}
       </div>
 
-      <button disabled={!selected || saving} onClick={proceed} style={{
+      <button className="pax-flow-primary" disabled={!selected || saving} onClick={proceed} style={{
         width: '100%', padding: 16, borderRadius: 14, fontWeight: 700, fontSize: 15, marginTop: 20,
         border: 'none', cursor: selected ? 'pointer' : 'default',
         background: selected ? 'linear-gradient(135deg, #FFC766, #D99B34)' : 'rgba(255,255,255,0.1)',

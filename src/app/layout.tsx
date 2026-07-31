@@ -3,7 +3,7 @@ import { Toaster } from 'react-hot-toast'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'QuicKeys™ — A dating app that goes beyond dating',
+  title: 'QuiKeys™ — A dating app that goes beyond dating',
   description: 'A guided dating experience that helps you navigate what happens after the conversation, not just during it.',
 }
 

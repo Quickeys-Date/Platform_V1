@@ -1,5 +1,7 @@
+const { PHASE_DEVELOPMENT_SERVER } = require('next/constants')
+
 /** @type {import('next').NextConfig} */
-const nextConfig = {
+const sharedConfig = {
   images: {
     remotePatterns: [
       {
@@ -11,4 +13,8 @@ const nextConfig = {
   },
 }
 
-module.exports = nextConfig
+module.exports = phase => ({
+  ...sharedConfig,
+  // A production build must never overwrite assets used by a running dev server.
+  distDir: phase === PHASE_DEVELOPMENT_SERVER ? '.next-dev' : '.next-build',
+})

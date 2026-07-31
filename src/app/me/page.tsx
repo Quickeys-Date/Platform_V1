@@ -5,6 +5,7 @@ import type { Profile } from '@/lib/types'
 import { BottomNav } from '@/components/BottomNav'
 import { QuicKeysLogo } from '@/components/QuicKeysLogo'
 import toast from 'react-hot-toast'
+import { apiFetch } from '@/lib/api'
 
 const RADII = ['25mi', '50mi', '100mi', 'Anywhere']
 const INTERESTS = ['Men', 'Women', 'Everyone']
@@ -25,6 +26,8 @@ const S = {
 export default function MyProfilePage() {
   const supabase = createClient()
   const [profile, setProfile] = useState<Profile | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [showSignOut, setShowSignOut] = useState(false)
@@ -35,21 +38,33 @@ export default function MyProfilePage() {
     location_radius: '25mi', interested_in: [] as string[],
   })
 
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) return
-      supabase.from('profiles').select('*').eq('id', user.id).single().then(({ data }) => {
-        if (!data) return
-        setProfile(data)
+  const loadProfile = async () => {
+    setLoading(true)
+    setLoadError('')
+
+    try {
+      const response = await apiFetch('/api/profiles/me')
+      if (!response.ok) throw new Error('Unable to load profile')
+      const { profile: data } = await response.json()
+      if (!data) throw new Error('Profile not found')
+
+      setProfile(data)
         setForm({
           bio: data.bio || '', connection_prompt: data.connection_prompt || '',
           age_range_min: data.age_range_min || 18, age_range_max: data.age_range_max || 45,
           location_radius: data.location_radius || '25mi', interested_in: data.interested_in || [],
         })
-        loadPhotoUrls(data.photos || [])
-      })
-    })
-  }, []) // eslint-disable-line
+      loadPhotoUrls(data.photos || []).catch(() => setPhotoUrls([]))
+    } catch {
+      setLoadError('We could not load your profile. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    loadProfile()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadPhotoUrls = async (photos: string[]) => {
     const urls = await Promise.all(photos.map(async (path) => {
@@ -107,9 +122,17 @@ export default function MyProfilePage() {
     window.location.href = '/'
   }
 
-  if (!profile) return (
+  if (loading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100svh', background: '#0A0A0A' }}>
       <div style={{ width: 24, height: 24, border: '2px solid #0FB7BF', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+    </div>
+  )
+
+  if (!profile) return (
+    <div className="feed-loading-page" style={{ flexDirection: 'column', gap: 16, padding: 24, textAlign: 'center' }}>
+      <p role="alert" style={{ color: 'rgba(255,255,255,0.65)', margin: 0 }}>{loadError || 'Profile unavailable.'}</p>
+      <button type="button" className="btn-gold" style={{ maxWidth: 260 }} onClick={loadProfile}>Try again</button>
+      <BottomNav active="profile" />
     </div>
   )
 
@@ -124,10 +147,14 @@ export default function MyProfilePage() {
       }}>
         <button onClick={() => window.location.href = '/feed'} style={{ color: 'rgba(255,255,255,0.5)', fontSize: 22 }}>←</button>
         <span style={{ fontWeight: 700, fontSize: 16, color: 'white' }}>My Profile</span>
-        <button onClick={() => editing ? save() : setEditing(true)} disabled={saving}
-          style={{ color: editing ? '#FFC766' : '#0FB7BF', fontWeight: 700, fontSize: 14 }}>
-          {editing ? (saving ? '…' : 'Save') : 'Edit'}
-        </button>
+        {editing ? (
+          <span aria-hidden="true" style={{ width: 28 }} />
+        ) : (
+          <button onClick={() => setEditing(true)}
+            style={{ color: '#0FB7BF', fontWeight: 700, fontSize: 14 }}>
+            Edit
+          </button>
+        )}
       </div>
 
       <div className="flex-1 overflow-y-auto pb-24">
@@ -253,78 +280,85 @@ export default function MyProfilePage() {
           )}
         </div>
 
-        {/* Account */}
-        <div style={S.section}>
-          <div style={S.label}>Account</div>
-          {[
-            { label: 'Change password', icon: '🔒', action: async () => { await supabase.auth.resetPasswordForEmail(profile.email); toast.success('Password reset email sent.') } },
-            { label: 'Request data deletion', icon: '📋', action: () => toast('Email ofelia@quickeysdating.com to request data deletion.', { duration: 6000 }) },
-          ].map(item => (
-            <button key={item.label} onClick={item.action} style={{
+        {!editing && (
+          <div style={S.section}>
+            <div style={S.label}>Safety &amp; Privacy</div>
+            <button onClick={() => window.location.href = '/me/blocked'} style={{
               width: '100%', display: 'flex', alignItems: 'center', gap: 12,
               padding: '14px 0', borderBottom: '1px solid rgba(255,255,255,0.05)',
               background: 'transparent', cursor: 'pointer', textAlign: 'left',
             }}>
-              <span>{item.icon}</span>
-              <span style={{ flex: 1, fontSize: 14, color: 'rgba(255,255,255,0.7)' }}>{item.label}</span>
+              <span aria-hidden="true" style={{ color: '#FFC766' }}>⊘</span>
+              <span style={{ flex: 1, fontSize: 14, color: 'rgba(255,255,255,0.7)' }}>Blocked profiles</span>
               <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: 14 }}>→</span>
             </button>
-          ))}
-          <button onClick={() => setShowSignOut(true)} style={{
-            width: '100%', display: 'flex', alignItems: 'center', gap: 12,
-            padding: '14px 0', background: 'transparent', cursor: 'pointer', textAlign: 'left',
-          }}>
-            <span style={{ fontSize: 14, color: '#ff6b6b', fontWeight: 600 }}>Sign out</span>
-          </button>
+          </div>
+        )}
+
+        {!editing && (
+          <div style={S.section}>
+            <div style={S.label}>Account</div>
+            {[
+              { label: 'Change password', icon: '🔒', action: async () => { await supabase.auth.resetPasswordForEmail(profile.email); toast.success('Password reset email sent.') } },
+              { label: 'Request data deletion', icon: '📋', action: () => toast('Email ofelia@quickeysdating.com to request data deletion.', { duration: 6000 }) },
+            ].map(item => (
+              <button key={item.label} onClick={item.action} style={{
+                width: '100%', display: 'flex', alignItems: 'center', gap: 12,
+                padding: '14px 0', borderBottom: '1px solid rgba(255,255,255,0.05)',
+                background: 'transparent', cursor: 'pointer', textAlign: 'left',
+              }}>
+                <span>{item.icon}</span>
+                <span style={{ flex: 1, fontSize: 14, color: 'rgba(255,255,255,0.7)' }}>{item.label}</span>
+                <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: 14 }}>→</span>
+              </button>
+            ))}
+            <button onClick={() => setShowSignOut(true)} style={{
+              width: '100%', padding: '14px 0', background: 'transparent', cursor: 'pointer', textAlign: 'left',
+            }}>
+              <span style={{ fontSize: 14, color: '#ff6b6b', fontWeight: 600 }}>Sign out</span>
+            </button>
+          </div>
+        )}
+
+        {editing && (
+          <div style={{ padding: '28px 20px 12px', display: 'flex', justifyContent: 'center' }}>
+            <button
+              type="button"
+              onClick={save}
+              disabled={saving}
+              className="btn-gold"
+              style={{ width: 'min(100%, 320px)' }}
+            >
+              {saving ? 'Saving…' : 'Save Changes'}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {showSignOut && (
+        <div className="signout-overlay" onClick={() => setShowSignOut(false)}>
+          <div
+            className="signout-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="signout-title"
+            onClick={event => event.stopPropagation()}
+          >
+            <h2 id="signout-title" className="signout-title">Sign out?</h2>
+            <p className="signout-description">
+              You&apos;ll need to log in again to access your account.
+            </p>
+            <div className="signout-actions">
+              <button type="button" onClick={() => setShowSignOut(false)} className="signout-cancel">
+                Cancel
+              </button>
+              <button type="button" onClick={signOut} className="signout-confirm">
+                Sign Out
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
-
-
-        {showSignOut && (
-  <div
-    className="signout-overlay"
-    onClick={() => setShowSignOut(false)}
-  >
-    <div
-      className="signout-dialog"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="signout-title"
-      onClick={event => event.stopPropagation()}
-    >
-
-
-
-
-      <h2 id="signout-title" className="signout-title">
-        Sign out?
-      </h2>
-
-      <p className="signout-description">
-        You&apos;ll need to log in again to access your account.
-      </p>
-
-      <div className="signout-actions">
-        <button
-          type="button"
-          onClick={() => setShowSignOut(false)}
-          className="signout-cancel"
-        >
-          Cancel
-        </button>
-
-        <button
-          type="button"
-          onClick={signOut}
-          className="signout-confirm"
-        >
-          Sign Out
-        </button>
-      </div>
-    </div>
-  </div>
-)}
-
+      )}
 
       <BottomNav active="profile" />
     </div>

@@ -13,10 +13,21 @@ function ResponseContent() {
   const triggerType = params.get('type') || 'CLOSE_CONVERSATION'
   const response = PAX_RESPONSES[stateId] || PAX_RESPONSES['PAX_NEUTRAL']
 
+  const changeEmotion = () => {
+    const previous = new URLSearchParams()
+    previous.set('state', stateId)
+    previous.set('trigger_id', triggerId)
+    previous.set('type', triggerType)
+    if (triggersParam) previous.set('triggers', triggersParam)
+    previous.set('index', indexParam)
+    router.push(`/pax/checkin?${previous.toString()}`)
+  }
+
   const proceed = () => {
     const next = new URLSearchParams()
     next.set('trigger_id', triggerId)
     next.set('type', triggerType)
+    next.set('state', stateId)
     next.set('triggers', triggersParam)
     next.set('index', indexParam)
     router.push(`/pax/feedback?${next.toString()}`)
@@ -25,6 +36,7 @@ function ResponseContent() {
   return (
     <div className="pax-screen animate-fade-up">
       <div style={{ fontWeight: 900, fontSize: 18, color: '#FFC766', marginBottom: 24 }}>Pax™</div>
+      <button onClick={changeEmotion} style={{ color: 'rgba(255,255,255,0.55)', fontSize: 13, marginBottom: 10, textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer' }}>← Change emotion</button>
       <div className="flex-1 flex flex-col justify-center">
         <div style={{ background: 'rgba(201,168,76,0.1)', border: '1px solid rgba(201,168,76,0.25)', borderRadius: 16, padding: '24px 20px' }}>
           {response.text.split('\n\n').map((para, i) => (
@@ -32,7 +44,7 @@ function ResponseContent() {
           ))}
         </div>
       </div>
-      <button onClick={proceed} style={{ width: '100%', padding: 16, background: 'white', color: '#0A0A0A', fontWeight: 700, fontSize: 15, borderRadius: 14, border: 'none', cursor: 'pointer', marginTop: 24 }}>
+      <button className="pax-flow-primary" onClick={proceed}>
         Continue
       </button>
     </div>

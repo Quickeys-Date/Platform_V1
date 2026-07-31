@@ -1,4 +1,4 @@
-# QuicKeys™ — V1 Full Production App
+# QuiKeys™ — V1 Full Production App
 
 ## Stack
 - **Frontend**: Next.js 14 (App Router) + Tailwind CSS

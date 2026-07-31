@@ -1,16 +1,20 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react'
 import { useParams } from 'next/navigation'
-import toast from 'react-hot-toast'
-
+import { createClient } from '@/lib/supabase/client'
+import type { Message, Conversation } from '@/lib/types'
 import {
   CloseConversationModal,
   UnmatchConfirmModal,
 } from '@/components/CloseConversationModal'
 import { apiFetch } from '@/lib/api'
-import { createClient } from '@/lib/supabase/client'
-import type { Conversation, Message } from '@/lib/types'
+import toast from 'react-hot-toast'
 
 function getAge(dob: string | null | undefined): string {
   if (!dob) return ''
@@ -27,23 +31,22 @@ export default function ChatPage() {
   const { id } = useParams<{ id: string }>()
   const supabase = createClient()
 
-  const [conversation, setConversation] =
-    useState<Conversation | null>(null)
+  const [conv, setConv] = useState<Conversation | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
   const [text, setText] = useState('')
   const [sending, setSending] = useState(false)
   const [showOptions, setShowOptions] = useState(false)
-  const [showUnmatchConfirm, setShowUnmatchConfirm] = useState(false)
+  const [showUnmatchConfirm, setShowUnmatchConfirm] =
+    useState(false)
   const [userId, setUserId] = useState<string | null>(null)
-  const [lastMessageAge, setLastMessageAge] = useState(0)
+  const [lastMsgAge, setLastMsgAge] = useState(0)
 
-  const messageEndRef = useRef<HTMLDivElement>(null)
+  const endRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
-    messageEndRef.current?.scrollIntoView({
+    endRef.current?.scrollIntoView({
       behavior: 'smooth',
-      block: 'end',
     })
   }, [messages])
 
@@ -60,14 +63,16 @@ export default function ChatPage() {
       const response = await apiFetch(
         `/api/conversations?status=${status}`
       )
+
       const data = await response.json()
 
-      const foundConversation = data.conversations?.find(
-        (item: Conversation) => item.id === id
+      const found = data.conversations?.find(
+        (conversation: Conversation) =>
+          conversation.id === id
       )
 
-      if (foundConversation) {
-        setConversation(foundConversation)
+      if (found) {
+        setConv(found)
         break
       }
     }
@@ -75,6 +80,7 @@ export default function ChatPage() {
     const messageResponse = await apiFetch(
       `/api/conversations/${id}/messages`
     )
+
     const messageData = await messageResponse.json()
     const loadedMessages = messageData.messages || []
 
@@ -85,7 +91,7 @@ export default function ChatPage() {
         loadedMessages[loadedMessages.length - 1].created_at
       )
 
-      setLastMessageAge(
+      setLastMsgAge(
         (Date.now() - lastMessage.getTime()) /
           (1000 * 60 * 60)
       )
@@ -108,19 +114,21 @@ export default function ChatPage() {
           filter: `conversation_id=eq.${id}`,
         },
         payload => {
-          const newMessage = payload.new as Message
+          setMessages(previousMessages => {
+            const newMessage = payload.new as Message
 
-          setMessages(currentMessages => {
-            const alreadyExists = currentMessages.some(
-              message => message.id === newMessage.id
-            )
+            if (
+              previousMessages.find(
+                message => message.id === newMessage.id
+              )
+            ) {
+              return previousMessages
+            }
 
-            if (alreadyExists) return currentMessages
-
-            return [...currentMessages, newMessage]
+            return [...previousMessages, newMessage]
           })
 
-          setLastMessageAge(0)
+          setLastMsgAge(0)
         }
       )
       .subscribe()
@@ -130,12 +138,12 @@ export default function ChatPage() {
     }
   }, [id, supabase])
 
-  const sendMessage = async () => {
-    const content = text.trim()
-
-    if (!content || sending) return
+  const send = async () => {
+    if (!text.trim() || sending) return
 
     setSending(true)
+
+    const content = text.trim()
     setText('')
 
     const response = await apiFetch(
@@ -149,7 +157,7 @@ export default function ChatPage() {
     if (!response.ok) {
       const error = await response.json()
 
-      toast.error(error.error || 'Failed to send message.')
+      toast.error(error.error || 'Failed to send')
       setText(content)
     }
 
@@ -166,10 +174,11 @@ export default function ChatPage() {
         method: 'POST',
       }
     )
+
     const data = await response.json()
 
     if (!response.ok) {
-      toast.error('Failed to archive conversation.')
+      toast.error('Failed to archive')
       return
     }
 
@@ -187,10 +196,11 @@ export default function ChatPage() {
         method: 'POST',
       }
     )
+
     const data = await response.json()
 
     if (!response.ok) {
-      toast.error('Failed to unmatch.')
+      toast.error('Failed to unmatch')
       return
     }
 
@@ -199,12 +209,12 @@ export default function ChatPage() {
       '&type=CLOSE_CONVERSATION'
   }
 
-  const otherProfile = conversation?.other_profile as any
-  const isArchived = conversation?.status === 'archived'
+  const other = conv?.other_profile as any
+  const isArchived = conv?.status === 'archived'
 
-  const showInactivityMessage =
+  const show48hIndicator =
     !isArchived &&
-    lastMessageAge >= 48 &&
+    lastMsgAge >= 48 &&
     messages.length > 0
 
   return (
@@ -213,35 +223,31 @@ export default function ChatPage() {
         <header className="chat-header">
           <button
             type="button"
-            className="chat-back"
-            aria-label="Return to conversations"
             onClick={() => {
-              window.location.href = isArchived
-                ? '/archived'
-                : '/feed'
+              window.location.href = '/feed'
             }}
+            className="chat-back"
+            aria-label="Return to connections"
           >
             ←
           </button>
 
-          {otherProfile ? (
+          {other ? (
             <button
               type="button"
-              className="chat-profile"
               onClick={() => {
-                window.location.href =
-                  `/profile/${otherProfile.id}`
+                window.location.href = `/profile/${other.id}`
               }}
+              className="chat-profile"
             >
               <span className="chat-avatar">
-                {otherProfile.first_name?.[0]?.toUpperCase() ||
-                  '?'}
+                {other.first_name?.[0]?.toUpperCase() || '?'}
               </span>
 
               <span className="chat-profile-copy">
                 <span className="chat-profile-name">
-                  {otherProfile.first_name}
-                  {getAge(otherProfile.date_of_birth)}
+                  {other.first_name}
+                  {getAge(other.date_of_birth)}
                 </span>
 
                 <span className="chat-profile-hint">
@@ -250,30 +256,30 @@ export default function ChatPage() {
               </span>
             </button>
           ) : (
-            <div className="chat-profile" />
+            <div className="chat-profile-placeholder" />
           )}
 
           <div className="chat-header-actions">
             {!isArchived && (
               <button
                 type="button"
+                onClick={() => setShowOptions(true)}
                 className="chat-options"
                 aria-label="Conversation options"
-                onClick={() => setShowOptions(true)}
               >
-                •••
+                ⋯
               </button>
             )}
 
             <button
               type="button"
-              className="chat-report"
-              aria-label="Report this user"
               onClick={() => {
                 window.location.href =
-                  `/report?reported_id=${otherProfile?.id}` +
+                  `/report?reported_id=${other?.id}` +
                   '&source=Chat'
               }}
+              className="chat-report"
+              aria-label="Report this user"
             >
               ⚑
             </button>
@@ -286,13 +292,13 @@ export default function ChatPage() {
           </div>
         </header>
 
-        {showInactivityMessage && (
+        {show48hIndicator && (
           <div className="chat-inactivity">
             No messages in a while — say hello?
           </div>
         )}
 
-        <div className="chat-messages">
+        <section className="chat-messages">
           <div className="chat-message-list">
             {messages.length === 0 && (
               <div className="chat-empty">
@@ -304,8 +310,7 @@ export default function ChatPage() {
                 </div>
 
                 <p>
-                  You matched with{' '}
-                  {otherProfile?.first_name || 'this person'}!
+                  You matched with {other?.first_name}!
                 </p>
 
                 <span>
@@ -315,22 +320,20 @@ export default function ChatPage() {
             )}
 
             {messages.map(message => {
-              const isMine = message.sender_id === userId
+              const mine = message.sender_id === userId
 
               return (
                 <div
                   key={message.id}
                   className={
-                    isMine
+                    mine
                       ? 'chat-message chat-message-mine'
                       : 'chat-message chat-message-theirs'
                   }
                 >
                   <div
                     className={
-                      isMine
-                        ? 'bubble-mine'
-                        : 'bubble-theirs'
+                      mine ? 'bubble-mine' : 'bubble-theirs'
                     }
                   >
                     {message.content}
@@ -348,20 +351,21 @@ export default function ChatPage() {
               )
             })}
 
-            <div ref={messageEndRef} />
+            <div ref={endRef} />
           </div>
-        </div>
+        </section>
 
         {!isArchived ? (
           <footer className="chat-composer">
             <div className="chat-composer-inner">
+              <label htmlFor="chat-message" className="sr-only">
+                Message
+              </label>
+
               <textarea
+                id="chat-message"
                 ref={inputRef}
                 value={text}
-                rows={1}
-                className="chat-textarea"
-                placeholder="Message…"
-                aria-label="Message"
                 onChange={event => setText(event.target.value)}
                 onKeyDown={event => {
                   if (
@@ -369,17 +373,20 @@ export default function ChatPage() {
                     !event.shiftKey
                   ) {
                     event.preventDefault()
-                    sendMessage()
+                    send()
                   }
                 }}
+                placeholder="Message…"
+                rows={1}
+                className="chat-textarea"
               />
 
               <button
                 type="button"
-                className="chat-send"
+                onClick={send}
                 disabled={!text.trim() || sending}
+                className="chat-send"
                 aria-label="Send message"
-                onClick={sendMessage}
               >
                 ↑
               </button>
@@ -391,15 +398,14 @@ export default function ChatPage() {
               This conversation is archived and read-only.
             </p>
 
-            {otherProfile && (
+            {other && (
               <button
                 type="button"
                 onClick={() => {
-                  window.location.href =
-                    `/profile/${otherProfile.id}`
+                  window.location.href = `/profile/${other.id}`
                 }}
               >
-                View {otherProfile.first_name}&apos;s profile →
+                View {other.first_name}&apos;s profile →
               </button>
             )}
           </footer>

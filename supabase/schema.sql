@@ -1,5 +1,5 @@
 -- ============================================================
--- QuicKeys™ V1 — Supabase Database Schema
+-- QuiKeys™ V1 — Supabase Database Schema
 -- Run this in Supabase SQL Editor
 -- ============================================================
 
@@ -26,7 +26,20 @@ CREATE TABLE IF NOT EXISTS profiles (
   location_radius TEXT NOT NULL DEFAULT '25mi' CHECK (location_radius IN ('25mi', '50mi', '100mi', 'Anywhere')),
   photos TEXT[] NOT NULL DEFAULT '{}' CHECK (array_length(photos, 1) <= 3),
   role TEXT NOT NULL DEFAULT 'USER' CHECK (role IN ('USER', 'ADMIN')),
-  status TEXT NOT NULL DEFAULT 'ACTIVE' CHECK (status IN ('ACTIVE', 'SUSPENDED', 'DEACTIVATED')),
+  status TEXT NOT NULL DEFAULT 'PENDING_EMAIL' CHECK (status IN ('PENDING_EMAIL', 'PENDING_APPROVAL', 'ACTIVE', 'REJECTED', 'SUSPENDED', 'DEACTIVATED')),
+  age_confirmed_at TIMESTAMPTZ,
+  terms_accepted_at TIMESTAMPTZ,
+  terms_version TEXT,
+  privacy_accepted_at TIMESTAMPTZ,
+  privacy_version TEXT,
+  application_submitted_at TIMESTAMPTZ,
+  reviewed_at TIMESTAMPTZ,
+  approved_at TIMESTAMPTZ,
+  approved_by UUID REFERENCES profiles(id),
+  rejection_reason TEXT,
+  activated_at TIMESTAMPTZ,
+  pax_access_started_at TIMESTAMPTZ,
+  pax_access_ends_at TIMESTAMPTZ,
   pax_onboarded BOOLEAN NOT NULL DEFAULT FALSE,
   profile_complete BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -51,6 +64,41 @@ CREATE TABLE IF NOT EXISTS conversations (
 CREATE INDEX idx_conversations_initiator ON conversations(initiator_id);
 CREATE INDEX idx_conversations_recipient ON conversations(recipient_id);
 CREATE INDEX idx_conversations_status ON conversations(status);
+
+-- ============================================================
+-- CONNECTION REQUESTS
+-- A conversation is created only after the recipient accepts.
+-- ============================================================
+CREATE TABLE IF NOT EXISTS connection_requests (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  sender_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  recipient_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  request_type TEXT NOT NULL DEFAULT 'STANDARD' CHECK (request_type IN ('STANDARD', 'QUIKEY')),
+  prompt_question TEXT CHECK (char_length(prompt_question) <= 180),
+  prompt_answer TEXT CHECK (char_length(prompt_answer) <= 300),
+  status TEXT NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'ACCEPTED', 'DECLINED', 'CANCELLED')),
+  responded_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CHECK (sender_id <> recipient_id),
+  CHECK (request_type = 'STANDARD' OR (prompt_question IS NOT NULL AND prompt_answer IS NOT NULL))
+);
+
+CREATE UNIQUE INDEX idx_connection_requests_one_pending
+  ON connection_requests(sender_id, recipient_id)
+  WHERE status = 'PENDING';
+CREATE INDEX idx_connection_requests_recipient_status ON connection_requests(recipient_id, status);
+CREATE INDEX idx_connection_requests_sender_status ON connection_requests(sender_id, status);
+
+CREATE TABLE IF NOT EXISTS user_blocks (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  blocker_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  blocked_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(blocker_id, blocked_id),
+  CHECK (blocker_id <> blocked_id)
+);
+CREATE INDEX idx_user_blocks_blocker ON user_blocks(blocker_id);
+CREATE INDEX idx_user_blocks_blocked ON user_blocks(blocked_id);
 
 -- ============================================================
 -- MESSAGES
@@ -106,7 +154,7 @@ CREATE INDEX idx_reports_status ON reports(status);
 CREATE TABLE IF NOT EXISTS admin_actions (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   admin_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
-  action TEXT NOT NULL CHECK (action IN ('SUSPEND', 'RESTORE', 'DEACTIVATE', 'REMOVE_PHOTO', 'EXPORT_DATA', 'DISMISS_REPORT', 'REVIEW_REPORT')),
+  action TEXT NOT NULL CHECK (action IN ('APPROVE', 'REJECT', 'SUSPEND', 'RESTORE', 'DEACTIVATE', 'REMOVE_PHOTO', 'EXPORT_DATA', 'DISMISS_REPORT', 'REVIEW_REPORT')),
   target_user_id UUID REFERENCES profiles(id),
   target_report_id UUID REFERENCES reports(id),
   notes TEXT,
@@ -147,8 +195,20 @@ CREATE TRIGGER messages_update_conversation
 CREATE OR REPLACE FUNCTION handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO profiles (id, email)
-  VALUES (NEW.id, NEW.email)
+  INSERT INTO profiles (
+    id, email, first_name, date_of_birth, gender, interested_in, city, state,
+    photos, status, terms_accepted_at, terms_version,
+    privacy_accepted_at, privacy_version
+  )
+  VALUES (
+    NEW.id, NEW.email, '',
+    COALESCE((NEW.raw_user_meta_data->>'date_of_birth')::date, DATE '1900-01-01'),
+    'Prefer not to say', '{}', '', '', '{}', 'PENDING_EMAIL',
+    CASE WHEN (NEW.raw_user_meta_data->>'accepted_beta_terms')::boolean THEN NOW() END,
+    'beta-v1',
+    CASE WHEN (NEW.raw_user_meta_data->>'accepted_beta_terms')::boolean THEN NOW() END,
+    'beta-v1'
+  )
   ON CONFLICT DO NOTHING;
   RETURN NEW;
 END;
@@ -164,6 +224,8 @@ CREATE TRIGGER on_auth_user_created
 
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE conversations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE connection_requests ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_blocks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE pax_triggers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE reports ENABLE ROW LEVEL SECURITY;
@@ -176,6 +238,31 @@ RETURNS BOOLEAN AS $$
     SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'ADMIN'
   );
 $$ LANGUAGE sql SECURITY DEFINER;
+
+CREATE OR REPLACE FUNCTION protect_beta_access_fields()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF (
+    OLD.status IS DISTINCT FROM NEW.status OR
+    OLD.age_confirmed_at IS DISTINCT FROM NEW.age_confirmed_at OR
+    OLD.application_submitted_at IS DISTINCT FROM NEW.application_submitted_at OR
+    OLD.reviewed_at IS DISTINCT FROM NEW.reviewed_at OR
+    OLD.approved_at IS DISTINCT FROM NEW.approved_at OR
+    OLD.approved_by IS DISTINCT FROM NEW.approved_by OR
+    OLD.rejection_reason IS DISTINCT FROM NEW.rejection_reason OR
+    OLD.activated_at IS DISTINCT FROM NEW.activated_at OR
+    OLD.pax_access_started_at IS DISTINCT FROM NEW.pax_access_started_at OR
+    OLD.pax_access_ends_at IS DISTINCT FROM NEW.pax_access_ends_at
+  ) AND auth.role() <> 'service_role' AND NOT is_admin() THEN
+    RAISE EXCEPTION 'Beta access fields can only be changed by an administrator';
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER profiles_protect_beta_access
+  BEFORE UPDATE ON profiles
+  FOR EACH ROW EXECUTE FUNCTION protect_beta_access_fields();
 
 -- PROFILES policies
 CREATE POLICY "Users can view non-deactivated profiles"
@@ -203,6 +290,26 @@ CREATE POLICY "Users can insert conversations"
 CREATE POLICY "Participants can update conversation"
   ON conversations FOR UPDATE
   USING (initiator_id = auth.uid() OR recipient_id = auth.uid() OR is_admin());
+
+-- CONNECTION REQUEST policies
+CREATE POLICY "Participants can view connection requests"
+  ON connection_requests FOR SELECT
+  USING (sender_id = auth.uid() OR recipient_id = auth.uid() OR is_admin());
+
+CREATE POLICY "Users can send connection requests"
+  ON connection_requests FOR INSERT
+  WITH CHECK (sender_id = auth.uid() AND recipient_id <> auth.uid());
+
+CREATE POLICY "Recipients can respond to requests"
+  ON connection_requests FOR UPDATE
+  USING (recipient_id = auth.uid() OR (sender_id = auth.uid() AND status = 'PENDING') OR is_admin());
+
+CREATE POLICY "Users can view own blocks" ON user_blocks FOR SELECT
+  USING (blocker_id = auth.uid() OR blocked_id = auth.uid() OR is_admin());
+CREATE POLICY "Users can block profiles" ON user_blocks FOR INSERT
+  WITH CHECK (blocker_id = auth.uid() AND blocked_id <> auth.uid());
+CREATE POLICY "Users can remove own blocks" ON user_blocks FOR DELETE
+  USING (blocker_id = auth.uid() OR is_admin());
 
 -- MESSAGES policies
 CREATE POLICY "Participants can view messages"

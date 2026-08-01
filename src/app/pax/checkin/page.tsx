@@ -9,6 +9,7 @@ function CheckinContent() {
   const params = useSearchParams()
   const [selected, setSelected] = useState<string | null>(params.get('state'))
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
 
   const triggerType = params.get('type') || 'CLOSE_CONVERSATION'
   const isInactivity = triggerType === 'INACTIVITY'
@@ -21,11 +22,19 @@ function CheckinContent() {
   const proceed = async () => {
     if (!selected) return
     setSaving(true)
-    if (currentTriggerId) {
-      await apiFetch('/api/pax', {
+    setSaveError('')
+    try {
+      if (!currentTriggerId) throw new Error('This check-in is no longer available.')
+      const response = await apiFetch('/api/pax', {
         method: 'POST',
         body: JSON.stringify({ trigger_id: currentTriggerId, state_id_selected: selected }),
       })
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(data.error || 'We could not save your response.')
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : 'We could not save your response. Please try again.')
+      setSaving(false)
+      return
     }
     const next = new URLSearchParams()
     next.set('state', selected)
@@ -76,6 +85,7 @@ function CheckinContent() {
       }}>
         {saving ? 'Saving…' : 'Continue'}
       </button>
+      {saveError && <p role="alert" style={{ color: '#ff9b91', fontSize: 13, lineHeight: 1.5, marginTop: 10, textAlign: 'center' }}>{saveError}</p>}
     </div>
   )
 }

@@ -8,7 +8,11 @@ export async function POST(req: NextRequest) {
   const { trigger_id, state_id_selected } = await req.json()
   const validStates = ['PAX_GOOD', 'PAX_NEUTRAL', 'PAX_NOT_GREAT', 'PAX_CONFUSED', 'PAX_DISAPPOINTED']
   if (!validStates.includes(state_id_selected)) return NextResponse.json({ error: 'Invalid state_id' }, { status: 400 })
-  const { data, error } = await supabase.from('pax_triggers').update({ state_id_selected }).eq('id', trigger_id).eq('user_id', user.id).select().single()
+  const { data, error } = await supabase.from('pax_triggers').update({
+    state_id_selected,
+    feedback_response: null,
+    feedback_open_text: null,
+  }).eq('id', trigger_id).eq('user_id', user.id).select().single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ trigger: data })
 }

@@ -17,19 +17,7 @@ export async function GET(request: NextRequest) {
   if (code) {
     const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
     if (!exchangeError && data.user) {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('profile_complete, pax_onboarded')
-        .eq('id', data.user.id)
-        .single()
-
-      if (!profile || !profile.profile_complete) {
-        return NextResponse.redirect(`${origin}/onboarding/profile`)
-      } else if (!profile.pax_onboarded) {
-        return NextResponse.redirect(`${origin}/onboarding/pax`)
-      } else {
-        return NextResponse.redirect(`${origin}/feed`)
-      }
+      return NextResponse.redirect(`${origin}/auth/verified`)
     }
   }
 
@@ -39,7 +27,7 @@ export async function GET(request: NextRequest) {
       type: type as any,
     })
     if (!otpError && data.user) {
-      return NextResponse.redirect(`${origin}/onboarding/profile`)
+      return NextResponse.redirect(`${origin}/auth/verified`)
     }
   }
 

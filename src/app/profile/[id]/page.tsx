@@ -59,28 +59,30 @@ export default function ConnectionProfilePage() {
       })
   }, [id, router, supabase])
 
-  const startConversation = async () => {
+  const sendConnectionRequest = async () => {
     setStarting(true)
 
-    const response = await fetch('/api/conversations', {
+    const response = await fetch('/api/connection-requests', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         recipient_id: id,
+        request_type: 'STANDARD',
       }),
     })
 
     const data = await response.json()
 
     if (!response.ok) {
-      toast.error('Could not start conversation')
+      toast.error(data.error || 'Could not send connection request')
       setStarting(false)
       return
     }
 
-    window.location.href = `/chat/${data.conversation.id}`
+    toast.success('Connection request sent')
+    window.location.href = '/requests'
   }
 
   if (loading) {
@@ -230,23 +232,12 @@ export default function ConnectionProfilePage() {
             <button
               type="button"
               disabled={starting}
-              onClick={startConversation}
+              onClick={sendConnectionRequest}
               className="connection-profile-start"
             >
-              {starting ? 'Starting…' : 'Start Conversation'}
+              {starting ? 'Sending…' : 'Send Connection Request'}
             </button>
 
-            <button
-              type="button"
-              onClick={() => {
-                window.location.href =
-                  `/report?reported_id=${id}` +
-                  '&source=Connection+Profile'
-              }}
-              className="connection-profile-report"
-            >
-              Report User
-            </button>
           </div>
         </section>
       </div>

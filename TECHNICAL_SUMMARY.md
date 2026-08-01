@@ -1,4 +1,4 @@
-# QuicKeys™ V1 — Technical Summary
+# QuiKeys™ V1 — Technical Summary
 *Required deliverable per Section 6 of V1 Full Developer Build Document*
 
 ## Stack Decisions

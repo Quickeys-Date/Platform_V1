@@ -1,0 +1,21 @@
+.page { min-height:100svh; padding:clamp(24px,5vw,72px); display:grid; place-items:center; color:#fff; background:radial-gradient(circle at 50% 25%,rgba(13,158,166,.2),transparent 34%),linear-gradient(145deg,#02090a,#061b1e 55%,#021415); }
+.card { width:min(100%,620px); padding:clamp(28px,5vw,52px); display:flex; flex-direction:column; align-items:center; border:1px solid rgba(217,155,52,.38); border-radius:28px; background:rgba(2,16,18,.88); box-shadow:0 26px 80px rgba(0,0,0,.42); text-align:center; }
+.card img { border-radius:50%; object-fit:cover; }
+.eyebrow { margin:12px 0 24px; color:#d99b34; font-size:11px; font-weight:800; letter-spacing:.16em; text-transform:uppercase; }
+.symbol { width:54px; height:54px; display:grid; place-items:center; border:1px solid #d99b34; border-radius:50%; color:#ffc766; background:rgba(13,158,166,.14); font-size:25px; }
+.card h1 { margin:18px 0 12px; color:#ffc766; font:500 clamp(30px,5vw,44px)/1.12 "Playfair Display",Georgia,serif; }
+.card>p:not(.eyebrow):not(.note) { max-width:500px; margin:0; color:rgba(255,255,255,.72); font-size:15px; line-height:1.65; }
+.steps { width:100%; margin:30px 0 20px; display:grid; gap:0; text-align:left; }
+.steps>div { position:relative; display:flex; gap:14px; padding:0 0 22px; }
+.steps>div:not(:last-child)::after { position:absolute; top:30px; bottom:2px; left:15px; width:1px; content:""; background:rgba(217,155,52,.25); }
+.steps span { position:relative; z-index:1; width:31px; height:31px; flex:0 0 auto; display:grid; place-items:center; border:1px solid rgba(217,155,52,.48); border-radius:50%; background:#061b1e; color:#d99b34; font-size:12px; font-weight:800; }
+.steps p { margin:0; display:grid; gap:3px; }
+.steps strong { color:rgba(255,255,255,.9); font-size:14px; }
+.steps small { color:rgba(255,255,255,.47); font-size:12px; }
+.steps .current span { border-color:#ffc766; color:#061b1e; background:#ffc766; box-shadow:0 0 18px rgba(255,199,102,.25); }
+.note { margin:0 0 22px!important; color:#58d9df!important; font-size:12px!important; }
+.secondary { min-width:150px; min-height:44px; padding:0 24px; border:1px solid rgba(217,155,52,.5); border-radius:999px; background:transparent; color:#ffc766; font-weight:700; cursor:pointer; }
+.secondary:hover { border-color:#ffc766; background:rgba(255,199,102,.07); }
+.loader { width:30px; height:30px; margin:24px; border:2px solid rgba(255,255,255,.15); border-top-color:#ffc766; border-radius:50%; animation:spin .8s linear infinite; }
+@keyframes spin { to { transform:rotate(360deg); } }
+@media(max-width:600px){.page{padding:16px}.card{padding:30px 22px;border-radius:22px}.steps{margin-top:26px}}

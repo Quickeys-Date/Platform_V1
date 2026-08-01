@@ -28,12 +28,12 @@ function ThankYouContent() {
           next.set('type', triggerType)
           next.set('trigger_id', triggerIds[nextIndex])
           window.location.href = `/pax/checkin?${next.toString()}`
-        }} style={{ width: '100%', padding: 16, background: 'linear-gradient(135deg, #FFC766, #D99B34)', color: '#0A0A0A', fontWeight: 700, fontSize: 15, borderRadius: 14, border: 'none', cursor: 'pointer', marginBottom: 12 }}>
+        }} className="pax-flow-primary" style={{ width: '100%', padding: 16, background: 'linear-gradient(135deg, #FFC766, #D99B34)', color: '#0A0A0A', fontWeight: 700, fontSize: 15, borderRadius: 14, border: 'none', cursor: 'pointer', marginBottom: 12 }}>
           Next check-in
         </button>
       ) : null}
 
-      <button onClick={() => window.location.href = '/feed'}
+      <button className={hasMore ? 'pax-flow-secondary' : 'pax-flow-primary'} onClick={() => window.location.href = '/feed'}
         style={{ width: '100%', padding: 16, background: hasMore ? 'transparent' : 'white', color: hasMore ? 'rgba(255,255,255,0.5)' : '#0A0A0A', fontWeight: hasMore ? 500 : 700, fontSize: 15, borderRadius: 14, border: hasMore ? '1px solid rgba(255,255,255,0.1)' : 'none', cursor: 'pointer' }}>
         Return to Connections
       </button>

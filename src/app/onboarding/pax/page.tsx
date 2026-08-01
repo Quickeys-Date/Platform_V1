@@ -1,175 +1,593 @@
 'use client'
-// src/app/onboarding/pax/page.tsx
-// S-05 Welcome, S-06 Meet Pax Intro, S-07 Mini Example, S-08 Pax Responds
-// CR#7: Back buttons added to S-06, S-07, S-08 (founder approved deviation from original spec)
-// CR#8: "Tell Me More" button added to S-08 alongside "I Understand"
-// CR#9: Option A and Option B on S-07 produce different Pax responses
-//        *** PLACEHOLDER RESPONSES — Ofelia to provide final content for both paths ***
-import { useState, useEffect } from 'react'
+
+import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
-// S-08 hardcoded copy — PAX_INTRO_ORIENTATION
-// CR#9: Two separate responses based on S-07 selection
-const PAX_RESPONSE_A = `When we're disappointed, it's easy to make ourselves the explanation.\n\nSometimes the most useful first step is recognizing there may not be enough information yet to draw a conclusion.`
+const PAX_RESPONSE_A = `When we're disappointed, it's easy to make ourselves the explanation.
 
-// PLACEHOLDER — Option B response — Ofelia to provide final content
-const PAX_RESPONSE_B = `Sometimes the most honest thing we can do is stay curious.\n\nWhen something feels unclear, it often means we're missing context — not that something is wrong with us or with them.`
+Sometimes the most useful first step is recognizing there may not be enough information yet to draw a conclusion.`
 
-// Tell Me More content for S-08 (CR#8)
-// PLACEHOLDER — Ofelia to provide final content
-const PAX_TELL_ME_MORE = `Patterns in how we interpret silence, distance, or slow responses often form early — and they can shape the way we read situations before we have all the facts.\n\nPax is here to help you notice those patterns, not to tell you what they mean.`
+const PAX_RESPONSE_B = `Sometimes the most honest thing we can do is stay curious.
 
-type Step = 'welcome' | 'intro' | 'example' | 'responds' | 'tellmemore'
+When something feels unclear, it often means we're missing context — not that something is wrong with us or with them.`
+
+const PAX_TELL_ME_MORE = `Patterns in how we interpret silence, distance, or slow responses often form early — and they can shape the way we read situations before we have all the facts.
+
+Pax is here to help you notice those patterns, not to tell you what they mean.`
+
+type Step = 'intro' | 'example' | 'responds' | 'tellmemore'
+type Answer = 'A' | 'B'
 
 export default function PaxOnboardingPage() {
-  const [step, setStep] = useState<Step>('welcome')
-  const [selected, setSelected] = useState<string | null>(null)
+  const [step, setStep] = useState<Step>('intro')
+  const [selected, setSelected] = useState<Answer | null>(null)
+  const [finishing, setFinishing] = useState(false)
   const [firstName, setFirstName] = useState('')
-  const supabase = createClient()
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user) {
-        supabase.from('profiles').select('first_name').eq('id', user.id).single()
-          .then(({ data }) => { if (data?.first_name) setFirstName(data.first_name) })
+    const loadProfile = async () => {
+      const supabase = createClient()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+
+      if (!user) return
+
+      const { data } = await supabase
+        .from('profiles')
+        .select('first_name')
+        .eq('id', user.id)
+        .single()
+
+      if (data?.first_name) {
+        setFirstName(data.first_name)
       }
-    })
-  }, []) // eslint-disable-line
+    }
+
+    loadProfile()
+  }, [])
 
   const finish = async () => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (user) {
-      await supabase.from('profiles').update({ pax_onboarded: true }).eq('id', user.id)
+    if (finishing) return
+
+    setFinishing(true)
+
+    try {
+      const supabase = createClient()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+
+      if (user) {
+        const { error } = await supabase
+          .from('profiles')
+          .update({ pax_onboarded: true })
+          .eq('id', user.id)
+
+        if (error) {
+          console.error('Unable to finish Pax onboarding:', error)
+          setFinishing(false)
+          return
+        }
+      }
+
+      window.location.href = '/feed'
+    } catch (error) {
+      console.error('Unable to finish Pax onboarding:', error)
+      setFinishing(false)
     }
-    window.location.href = '/feed'
   }
 
-  // S-05 Welcome
-  if (step === 'welcome') return (
-    <div className="flex flex-col min-h-svh items-center justify-center px-8 text-center animate-fade-up">
-      <div className="text-6xl mb-6">🗝️</div>
-      <h1 className="text-[28px] font-black tracking-tight mb-3">
-        Welcome to QuicKeys™, {firstName || 'there'}.
-      </h1>
-      <p className="text-gray-500 text-lg leading-relaxed mb-12">
-        Before you meet anyone, we want to introduce you to Pax.
-      </p>
-      <button onClick={() => setStep('intro')}
-        className="w-full bg-black text-white py-4 rounded-xl font-semibold text-base">
-        Meet Pax
-      </button>
-    </div>
-  )
+  const goBack = () => {
+    if (step === 'intro') {
+      window.location.href = '/onboarding/welcome'
+      return
+    }
 
-  // S-06 Meet Pax Introduction — CR#7: back button added
-  if (step === 'intro') return (
-    <div className="pax-screen animate-fade-up">
-      {/* CR#7: Back button */}
-      <button onClick={() => setStep('welcome')} className="self-start mb-4 text-white/60 text-sm">← Back</button>
-      <div className="font-black text-lg mb-8" style={{ color: '#C9A84C' }}>Pax™</div>
-      <div className="flex-1 flex flex-col justify-center">
-        <p className="text-xl font-medium leading-relaxed tracking-tight text-white">
-          I'm Pax.<br /><br />
-          Most dating apps help you find people.<br /><br />
-          I help you think clearly about the people you meet.<br /><br />
-          Sometimes a conversation feels exciting. Sometimes confusing. Sometimes disappointing.<br /><br />
-          When that happens, I'm here to help you slow down, see things more clearly, and decide what matters next.
-        </p>
-      </div>
-      <button onClick={() => setStep('example')}
-        className="w-full bg-white text-black py-4 rounded-xl font-semibold text-base mt-8">
-        Continue
-      </button>
-    </div>
-  )
+    if (step === 'example') {
+      setSelected(null)
+      setStep('intro')
+      return
+    }
 
-  // S-07 Mini Example — CR#7: back button, CR#9: different responses per selection
-  if (step === 'example') return (
-    <div className="pax-screen animate-fade-up">
-      {/* CR#7: Back button */}
-      <button onClick={() => setStep('intro')} className="self-start mb-4 text-white/60 text-sm">← Back</button>
-      <div className="font-black text-lg mb-6" style={{ color: '#C9A84C' }}>Pax™</div>
-      <p className="text-xs font-semibold tracking-widest mb-4" style={{ color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase' }}>
-        Here's an example of how Pax works.
-      </p>
-      <p className="text-sm mb-3" style={{ color: 'rgba(255,255,255,0.6)' }}>Situation:</p>
-      <p className="text-xl font-semibold leading-snug tracking-tight text-white mb-8">
-        Someone you've enjoyed talking with suddenly stops responding.<br /><br />
-        What is your first thought?
-      </p>
-      <div className="space-y-3 flex-1">
-        {[
-          { key: 'A', text: 'Something is wrong with me' },
-          { key: 'B', text: 'Maybe something changed on their side' },
-        ].map(opt => (
-          <button key={opt.key} onClick={() => setSelected(opt.key)}
-            className={`w-full text-left px-5 py-4 rounded-xl border-[1.5px] transition-all text-white font-medium text-sm
-              ${selected === opt.key ? 'border-[#C9A84C] bg-white/15' : 'border-white/15 bg-white/5 hover:bg-white/10'}`}>
-            <span style={{ color: '#C9A84C', marginRight: 8, fontWeight: 700 }}>{opt.key}</span>
-            {opt.text}
+    if (step === 'responds') {
+      setStep('example')
+      return
+    }
+
+    setStep('responds')
+  }
+
+  const selectedResponse =
+    selected === 'A' ? PAX_RESPONSE_A : PAX_RESPONSE_B
+
+  return (
+    <main className="pax-page">
+      <button
+        type="button"
+        onClick={goBack}
+        className="pax-back-button"
+        aria-label="Go back"
+      >
+        ← Back
+      </button>
+
+      {step === 'intro' && (
+        <section className="pax-layout pax-intro-layout">
+          <div className="pax-content pax-intro-content">
+            <p className="pax-wordmark">Pax™</p>
+
+            <div className="pax-intro-copy">
+              <p className="pax-lead">I&apos;m Pax.</p>
+
+              <p>Most dating apps help you find people.</p>
+
+              <p>I help you think clearly about the people you meet.</p>
+
+              <p>
+                Sometimes a conversation feels exciting. Sometimes confusing.
+                Sometimes disappointing.
+              </p>
+
+              <p>
+                When that happens, I&apos;m here to help you slow down, see
+                things more clearly, and decide what matters next.
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setStep('example')}
+            className="pax-primary-button"
+          >
+            Continue
           </button>
-        ))}
-      </div>
-      <button disabled={!selected} onClick={() => setStep('responds')}
-        className={`w-full py-4 rounded-xl font-semibold text-base mt-6 transition-all
-          ${selected ? 'bg-white text-black' : 'bg-white/20 text-white/40'}`}>
-        Continue
-      </button>
-    </div>
-  )
+        </section>
+      )}
 
-  // S-08 Pax Responds — CR#7: back, CR#8: Tell Me More button, CR#9: different response per selection
-  if (step === 'responds') return (
-    <div className="pax-screen animate-fade-up">
-      {/* CR#7: Back button */}
-      <button onClick={() => setStep('example')} className="self-start mb-4 text-white/60 text-sm">← Back</button>
-      <div className="font-black text-lg mb-6" style={{ color: '#C9A84C' }}>Pax™</div>
-      <div className="flex-1 flex flex-col justify-center">
-        <div className="rounded-xl p-6"
-          style={{ background: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.3)' }}>
-          {/* CR#9: Different response based on selection */}
-          {(selected === 'A' ? PAX_RESPONSE_A : PAX_RESPONSE_B).split('\n\n').map((para, i) => (
-            <p key={i} className={`text-lg leading-relaxed tracking-tight text-white ${i > 0 ? 'mt-4' : ''}`}>
-              {para}
+      {step === 'example' && (
+        <section className="pax-layout">
+          <div className="pax-content">
+            <p className="pax-wordmark">Pax™</p>
+
+            <p className="pax-eyebrow">
+              Here&apos;s an example of how Pax works.
             </p>
-          ))}
-        </div>
-      </div>
-      {/* CR#8: Both buttons — Tell Me More + I Understand */}
-      <div className="mt-8 space-y-3">
-        <button onClick={() => setStep('tellmemore')}
-          className="w-full bg-white/15 text-white py-4 rounded-xl font-semibold text-base border border-white/20">
-          Tell Me More
-        </button>
-        <button onClick={finish}
-          className="w-full bg-white text-black py-4 rounded-xl font-semibold text-base">
-          I Understand
-        </button>
-      </div>
-    </div>
-  )
 
-  // CR#8: Tell Me More screen
-  if (step === 'tellmemore') return (
-    <div className="pax-screen animate-fade-up">
-      <button onClick={() => setStep('responds')} className="self-start mb-4 text-white/60 text-sm">← Back</button>
-      <div className="font-black text-lg mb-6" style={{ color: '#C9A84C' }}>Pax™</div>
-      <div className="flex-1 flex flex-col justify-center">
-        <div className="rounded-xl p-6"
-          style={{ background: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.3)' }}>
-          {PAX_TELL_ME_MORE.split('\n\n').map((para, i) => (
-            <p key={i} className={`text-lg leading-relaxed tracking-tight text-white ${i > 0 ? 'mt-4' : ''}`}>
-              {para}
-            </p>
-          ))}
-        </div>
-      </div>
-      <button onClick={finish}
-        className="w-full bg-white text-black py-4 rounded-xl font-semibold text-base mt-8">
-        I Understand
-      </button>
-    </div>
-  )
+            <div className="pax-question-area">
+              <p className="pax-situation-label">Situation:</p>
 
-  return null
+              <h1 className="pax-situation">
+                Someone you&apos;ve enjoyed talking with suddenly stops
+                responding.
+              </h1>
+
+              <h2 className="pax-question">
+                What is your first thought?
+              </h2>
+
+              <div className="pax-options">
+                <button
+                  type="button"
+                  onClick={() => setSelected('A')}
+                  className={`pax-option ${
+                    selected === 'A' ? 'pax-option-selected' : ''
+                  }`}
+                >
+                  <span className="pax-option-letter">A</span>
+                  <span>Something is wrong with me</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setSelected('B')}
+                  className={`pax-option ${
+                    selected === 'B' ? 'pax-option-selected' : ''
+                  }`}
+                >
+                  <span className="pax-option-letter">B</span>
+                  <span>Maybe something changed on their side</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            disabled={!selected}
+            onClick={() => setStep('responds')}
+            className="pax-primary-button"
+          >
+            Continue
+          </button>
+        </section>
+      )}
+
+      {step === 'responds' && (
+        <section className="pax-layout">
+          <div className="pax-content">
+            <p className="pax-wordmark">Pax™</p>
+
+            <div className="pax-response-card">
+              {selectedResponse.split('\n\n').map((paragraph, index) => (
+                <p key={index}>{paragraph}</p>
+              ))}
+            </div>
+          </div>
+
+          <div className="pax-actions">
+            <button
+              type="button"
+              onClick={() => setStep('tellmemore')}
+              className="pax-secondary-button"
+            >
+              Tell Me More
+            </button>
+
+            <button
+              type="button"
+              onClick={finish}
+              disabled={finishing}
+              className="pax-primary-button"
+            >
+              {finishing ? 'Finishing…' : 'I Understand'}
+            </button>
+          </div>
+        </section>
+      )}
+
+      {step === 'tellmemore' && (
+        <section className="pax-layout">
+          <div className="pax-content">
+            <p className="pax-wordmark">Pax™</p>
+
+            <div className="pax-response-card">
+              {PAX_TELL_ME_MORE.split('\n\n').map((paragraph, index) => (
+                <p key={index}>{paragraph}</p>
+              ))}
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={finish}
+            disabled={finishing}
+            className="pax-primary-button"
+          >
+            {finishing ? 'Finishing…' : 'I Understand'}
+          </button>
+        </section>
+      )}
+
+      <style jsx>{`
+        .pax-page {
+          --pax-deep: #0a0a0a;
+          --pax-outer: #061b1e;
+          --pax-mid: #043538;
+          --pax-teal: #0fb7bf;
+          --pax-teal-highlight: #66f6ff;
+          --pax-gold: #ffc766;
+          --pax-gold-mid: #d99b34;
+          --pax-gold-dark: #8a5a12;
+
+          position: relative;
+          width: 100%;
+          min-height: 100svh;
+          overflow-x: hidden;
+          color: #ffffff;
+          background:
+            radial-gradient(
+              circle at 50% 40%,
+              rgba(13, 158, 166, 0.18),
+              transparent 48%
+            ),
+            linear-gradient(
+              145deg,
+              var(--pax-mid) 0%,
+              var(--pax-outer) 50%,
+              #021415 100%
+            );
+        }
+
+        .pax-back-button {
+          position: absolute;
+          top: max(22px, env(safe-area-inset-top));
+          left: clamp(20px, 4vw, 64px);
+          z-index: 10;
+          padding: 8px 4px;
+          border: 0;
+          background: transparent;
+          color: rgba(255, 255, 255, 0.7);
+          font: inherit;
+          font-size: 14px;
+          cursor: pointer;
+          transition:
+            color 180ms ease,
+            transform 180ms ease;
+        }
+
+        .pax-back-button:hover {
+          color: var(--pax-teal-highlight);
+          transform: translateX(-2px);
+        }
+
+        .pax-layout {
+          width: min(100% - 40px, 760px);
+          min-height: 100svh;
+          margin: 0 auto;
+          padding:
+            max(82px, calc(env(safe-area-inset-top) + 62px))
+            0
+            max(28px, env(safe-area-inset-bottom));
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+          gap: 32px;
+        }
+
+        .pax-intro-layout {
+          width: min(100% - 40px, 680px);
+        }
+
+        .pax-content {
+          width: 100%;
+          margin: auto 0;
+        }
+
+        .pax-intro-content {
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+        }
+
+        .pax-wordmark {
+          margin: 0 0 clamp(42px, 7vh, 72px);
+          color: var(--pax-gold-mid);
+          font-family: Georgia, 'Times New Roman', serif;
+          font-size: clamp(22px, 2.2vw, 30px);
+          font-weight: 700;
+          letter-spacing: 0.01em;
+        }
+
+        .pax-intro-copy {
+          display: grid;
+          gap: clamp(22px, 3.5vh, 34px);
+          font-size: clamp(17px, 1.3vw, 21px);
+          line-height: 1.65;
+          color: rgba(255, 255, 255, 0.88);
+        }
+
+        .pax-intro-copy p {
+          margin: 0;
+        }
+
+        .pax-intro-copy .pax-lead {
+          color: #ffffff;
+          font-weight: 700;
+          font-size: clamp(21px, 1.6vw, 26px);
+        }
+
+        .pax-eyebrow {
+          margin: 0 0 18px;
+          color: rgba(102, 246, 255, 0.65);
+          font-size: 12px;
+          font-weight: 700;
+          letter-spacing: 0.14em;
+          text-transform: uppercase;
+        }
+
+        .pax-question-area {
+          width: 100%;
+        }
+
+        .pax-situation-label {
+          margin: 0 0 10px;
+          color: rgba(255, 255, 255, 0.6);
+          font-size: 14px;
+        }
+
+        .pax-situation {
+          margin: 0 0 28px;
+          max-width: 680px;
+          color: #ffffff;
+          font-size: clamp(20px, 2vw, 27px);
+          font-weight: 700;
+          line-height: 1.4;
+        }
+
+        .pax-question {
+          margin: 0 0 26px;
+          color: #ffffff;
+          font-size: clamp(19px, 1.7vw, 24px);
+          font-weight: 700;
+        }
+
+        .pax-options {
+          display: grid;
+          gap: 12px;
+        }
+
+        .pax-option {
+          width: 100%;
+          min-height: 58px;
+          padding: 15px 20px;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          border: 1px solid rgba(102, 246, 255, 0.18);
+          border-radius: 14px;
+          background: rgba(255, 255, 255, 0.055);
+          color: rgba(255, 255, 255, 0.88);
+          font: inherit;
+          font-size: 15px;
+          text-align: left;
+          cursor: pointer;
+          transition:
+            border-color 180ms ease,
+            background 180ms ease,
+            transform 180ms ease;
+        }
+
+        .pax-option:hover {
+          border-color: rgba(15, 183, 191, 0.55);
+          background: rgba(15, 183, 191, 0.11);
+          transform: translateY(-1px);
+        }
+
+        .pax-option-selected {
+          border-color: var(--pax-teal);
+          background: rgba(15, 183, 191, 0.16);
+          box-shadow: 0 0 22px rgba(13, 158, 166, 0.12);
+        }
+
+        .pax-option-letter {
+          color: var(--pax-gold);
+          font-weight: 800;
+        }
+
+        .pax-response-card {
+          padding: clamp(22px, 4vw, 34px);
+          border: 1px solid rgba(217, 155, 52, 0.4);
+          border-radius: 18px;
+          background:
+            linear-gradient(
+              145deg,
+              rgba(138, 90, 18, 0.17),
+              rgba(255, 199, 102, 0.06)
+            );
+          box-shadow: 0 18px 55px rgba(0, 0, 0, 0.22);
+        }
+
+        .pax-response-card p {
+          margin: 0 0 20px;
+          color: rgba(255, 255, 255, 0.9);
+          font-size: clamp(16px, 1.4vw, 20px);
+          line-height: 1.7;
+        }
+
+        .pax-response-card p:last-child {
+          margin-bottom: 0;
+        }
+
+        .pax-actions {
+          width: min(100%, 360px);
+          margin: 0 auto;
+          display: grid;
+          gap: 12px;
+        }
+
+        .pax-primary-button,
+        .pax-secondary-button {
+          width: min(100%, 340px);
+          min-height: 52px;
+          margin: 0 auto;
+          padding: 14px 24px;
+          border-radius: 14px;
+          font: inherit;
+          font-size: 15px;
+          font-weight: 700;
+          cursor: pointer;
+          transition:
+            transform 180ms ease,
+            opacity 180ms ease,
+            box-shadow 180ms ease;
+        }
+
+        .pax-primary-button {
+          border: 1px solid var(--pax-gold-mid);
+          background: linear-gradient(
+            135deg,
+            #ffe7b1 0%,
+            var(--pax-gold) 46%,
+            var(--pax-gold-mid) 100%
+          );
+          color: var(--pax-deep);
+          box-shadow: 0 8px 28px rgba(217, 155, 52, 0.22);
+        }
+
+        .pax-secondary-button {
+          border: 1px solid rgba(102, 246, 255, 0.3);
+          background: rgba(15, 183, 191, 0.09);
+          color: var(--pax-teal-highlight);
+        }
+
+        .pax-primary-button:hover:not(:disabled),
+        .pax-secondary-button:hover:not(:disabled) {
+          transform: translateY(-2px);
+        }
+
+        .pax-primary-button:hover:not(:disabled) {
+          box-shadow: 0 12px 34px rgba(217, 155, 52, 0.3);
+        }
+
+        .pax-primary-button:disabled,
+        .pax-secondary-button:disabled {
+          border-color: rgba(255, 255, 255, 0.12);
+          background: rgba(255, 255, 255, 0.12);
+          color: rgba(255, 255, 255, 0.35);
+          box-shadow: none;
+          cursor: not-allowed;
+        }
+
+        @media (max-width: 640px) {
+          .pax-back-button {
+            top: max(14px, env(safe-area-inset-top));
+            left: 16px;
+          }
+
+          .pax-layout,
+          .pax-intro-layout {
+            width: min(100% - 32px, 520px);
+            padding-top: max(
+              68px,
+              calc(env(safe-area-inset-top) + 54px)
+            );
+          }
+
+          .pax-wordmark {
+            margin-bottom: 32px;
+          }
+
+          .pax-intro-copy {
+            gap: 20px;
+            line-height: 1.55;
+          }
+
+          .pax-primary-button,
+          .pax-secondary-button {
+            width: 100%;
+          }
+
+          .pax-response-card {
+            padding: 22px 18px;
+          }
+        }
+
+        @media (max-height: 720px) and (min-width: 641px) {
+          .pax-layout {
+            padding-top: 66px;
+            padding-bottom: 18px;
+            gap: 20px;
+          }
+
+          .pax-wordmark {
+            margin-bottom: 26px;
+          }
+
+          .pax-intro-copy {
+            gap: 16px;
+            font-size: 16px;
+            line-height: 1.45;
+          }
+
+          .pax-primary-button,
+          .pax-secondary-button {
+            min-height: 46px;
+            padding-block: 11px;
+          }
+        }
+      `}</style>
+    </main>
+  )
 }

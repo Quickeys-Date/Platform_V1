@@ -11,9 +11,27 @@ export default function ArchivedPage() {
 
   const [convs, setConvs] = useState<Conversation[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
   const [viewingConv, setViewingConv] = useState<Conversation | null>(null)
   const [messages, setMessages] = useState<any[]>([])
   const [userId, setUserId] = useState<string | null>(null)
+
+  const loadArchived = async () => {
+    setLoading(true)
+    setLoadError('')
+
+    try {
+      const response = await apiFetch('/api/conversations?status=archived')
+      if (!response.ok) throw new Error('Unable to load archive')
+      const data = await response.json()
+      setConvs(data.conversations || [])
+    } catch {
+      setConvs([])
+      setLoadError('We could not load your archive. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
     supabase.auth
@@ -22,16 +40,7 @@ export default function ArchivedPage() {
         setUserId(user?.id || null)
       })
 
-    apiFetch('/api/conversations?status=archived')
-      .then(response => response.json())
-      .then(data => {
-        setConvs(data.conversations || [])
-        setLoading(false)
-      })
-      .catch(() => {
-        setConvs([])
-        setLoading(false)
-      })
+    loadArchived()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const openConversation = async (conv: Conversation) => {
@@ -155,6 +164,12 @@ export default function ArchivedPage() {
         {loading ? (
           <div className="archive-loading">
             <div className="archive-spinner" />
+          </div>
+        ) : loadError ? (
+          <div className="archive-empty-state" role="alert">
+            <h2>Archive unavailable</h2>
+            <p>{loadError}</p>
+            <button type="button" className="btn-gold" style={{ maxWidth: 240 }} onClick={loadArchived}>Try again</button>
           </div>
         ) : convs.length === 0 ? (
           <div className="archive-empty-state">

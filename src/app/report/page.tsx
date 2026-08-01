@@ -34,33 +34,33 @@ function ReportContent() {
   }
 
   if (submitted) return (
-    <div className="flex flex-col min-h-svh items-center justify-center px-8 text-center" style={{ background: '#0A0A0A' }}>
+    <div className="report-success flex flex-col min-h-svh items-center justify-center px-8 text-center" style={{ background: '#0A0A0A' }}>
       <div style={{ fontSize: 48, marginBottom: 16 }}>✅</div>
       <h1 style={{ fontSize: 22, fontWeight: 700, color: 'white', marginBottom: 8 }}>Report received</h1>
       <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.4)', lineHeight: 1.6, marginBottom: 32 }}>
-        Thank you. Your report will be reviewed by the QuicKeys™ team.
+        Thank you. Your report will be reviewed by the QuiKeys™ team.
       </p>
-      <button onClick={() => router.back()} style={{ width: '100%', padding: 16, background: 'linear-gradient(135deg, #FFC766, #D99B34)', color: '#0A0A0A', fontWeight: 700, fontSize: 15, borderRadius: 14, border: 'none', cursor: 'pointer' }}>
+      <button className="report-return" onClick={() => router.back()} style={{ width: '100%', padding: 16, background: 'linear-gradient(135deg, #FFC766, #D99B34)', color: '#0A0A0A', fontWeight: 700, fontSize: 15, borderRadius: 14, border: 'none', cursor: 'pointer' }}>
         Return
       </button>
     </div>
   )
 
   return (
-    <div className="flex flex-col min-h-svh" style={{ background: '#0A0A0A' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 20px', borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(6,27,30,0.9)' }}>
+    <div className="report-page flex flex-col min-h-svh" style={{ background: '#0A0A0A' }}>
+      <div className="report-topbar" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 20px', borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(6,27,30,0.9)' }}>
         <button onClick={() => router.back()} style={{ color: 'rgba(255,255,255,0.5)', fontSize: 22 }}>←</button>
         <h1 style={{ fontWeight: 700, fontSize: 16, color: 'white', flex: 1, textAlign: 'center' }}>Report this user</h1>
         <div style={{ width: 28 }} />
       </div>
 
-      <div className="flex-1 overflow-y-auto px-5 py-5">
+      <div className="report-content flex-1 overflow-y-auto px-5 py-5">
         <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.4)', marginBottom: 20, lineHeight: 1.6 }}>
-          Select the reason for your report. All reports are reviewed by the QuicKeys™ team.
+          Select the reason for your report. All reports are reviewed by the QuiKeys™ team.
         </p>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20 }}>
+        <div className="report-options" style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20 }}>
           {OPTIONS.map(opt => (
-            <button key={opt.id} onClick={() => setSelected(opt.id)} style={{
+            <button className="report-option" key={opt.id} onClick={() => setSelected(opt.id)} style={{
               display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px',
               borderRadius: 14, textAlign: 'left', cursor: 'pointer',
               border: `1.5px solid ${selected === opt.id ? '#0FB7BF' : 'rgba(255,255,255,0.08)'}`,
@@ -72,7 +72,7 @@ function ReportContent() {
             </button>
           ))}
         </div>
-        <div style={{ marginBottom: 24 }}>
+        <div className="report-details" style={{ marginBottom: 24 }}>
           <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8 }}>
             Additional details (optional)
           </label>
@@ -81,7 +81,7 @@ function ReportContent() {
             style={{ width: '100%', background: 'rgba(255,255,255,0.04)', border: '1.5px solid rgba(255,255,255,0.08)', borderRadius: 12, padding: '12px 14px', color: 'white', fontSize: 14, resize: 'none', fontFamily: 'inherit' }} />
           <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.2)', textAlign: 'right', marginTop: 4 }}>{note.length}/300</p>
         </div>
-        <button disabled={!selected || submitting} onClick={submit} style={{
+        <button className="report-submit" disabled={!selected || submitting} onClick={submit} style={{
           width: '100%', padding: 16, borderRadius: 14, fontWeight: 700, fontSize: 15, cursor: selected ? 'pointer' : 'default', border: 'none',
           background: selected ? 'linear-gradient(135deg, #FFC766, #D99B34)' : 'rgba(255,255,255,0.08)',
           color: selected ? '#0A0A0A' : 'rgba(255,255,255,0.2)',

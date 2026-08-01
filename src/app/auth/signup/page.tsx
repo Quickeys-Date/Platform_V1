@@ -5,6 +5,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import toast from 'react-hot-toast'
 import { createClient } from '@/lib/supabase/client'
+import { SetupProgress } from '@/components/SetupProgress'
 
 export default function SignUpPage() {
   const [loading, setLoading] = useState(false)
@@ -59,7 +60,7 @@ export default function SignUpPage() {
 
       if (age < 18) {
         nextErrors.dob =
-          'QuicKeys is for users 18 and older.'
+          'QuiKeys is for users 18 and older.'
       }
     }
 
@@ -92,6 +93,10 @@ export default function SignUpPage() {
         options: {
           emailRedirectTo:
             `${window.location.origin}/auth/callback`,
+          data: {
+            date_of_birth: form.dob,
+            accepted_beta_terms: true,
+          },
         },
       })
 
@@ -119,6 +124,8 @@ export default function SignUpPage() {
             body: JSON.stringify({
               user_id: data.user.id,
               email: form.email.trim(),
+              date_of_birth: form.dob,
+              accepted_terms: form.terms,
             }),
           }
         )
@@ -133,7 +140,9 @@ export default function SignUpPage() {
 
       window.location.href =
         '/auth/verify?email=' +
-        encodeURIComponent(form.email.trim())
+        encodeURIComponent(form.email.trim()) +
+        '&sent_at=' +
+        Date.now()
     } catch {
       toast.error(
         'Unable to create your account. Please try again.'
@@ -146,12 +155,13 @@ export default function SignUpPage() {
   return (
     <main className="signup-page">
       <div className="signup-frame" aria-hidden="true" />
+      <SetupProgress active={2} />
 
       <section className="signup-content">
         <div className="signup-logo">
           <Image
             src="/quickeys-icon.png"
-            alt="QuicKeys"
+            alt="QuiKeys"
             width={84}
             height={84}
             priority
@@ -160,7 +170,7 @@ export default function SignUpPage() {
 
         <header className="signup-heading">
           <h1>Create your account</h1>
-          <p>Start your QuicKeys journey</p>
+          <p>Start your QuiKeys journey</p>
         </header>
 
         <form onSubmit={handleSubmit} className="signup-form">
@@ -319,7 +329,8 @@ export default function SignUpPage() {
                 I agree to the{' '}
                 <Link href="/terms">
                   Terms of Service
-                </Link>
+                </Link>{' '}and{' '}
+                <Link href="/privacy">Privacy Policy</Link>
               </span>
             </label>
 

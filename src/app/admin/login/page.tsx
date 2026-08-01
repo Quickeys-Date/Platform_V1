@@ -1,94 +1,120 @@
 'use client'
-// src/app/admin/login/page.tsx
+
+import Link from 'next/link'
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { QuicKeysLogo } from '@/components/QuicKeysLogo'
+import styles from './page.module.css'
 
 export default function AdminLoginPage() {
   const [form, setForm] = useState({ email: '', password: '' })
-  const [showPass, setShowPass] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const submit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
     setError('')
     setLoading(true)
 
-    const supabase = createClient()
-    const { data, error: authErr } = await supabase.auth.signInWithPassword({
-      email: form.email,
-      password: form.password,
-    })
+    try {
+      const supabase = createClient()
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
+        email: form.email.trim(),
+        password: form.password,
+      })
 
-    if (authErr) { setError('Invalid admin credentials.'); setLoading(false); return }
+      if (authError || !data.user) {
+        setError('The email or password is incorrect.')
+        return
+      }
 
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', data.user.id)
-      .single()
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role, status')
+        .eq('id', data.user.id)
+        .single()
 
-    if (!profile || profile.role !== 'ADMIN') {
-      setError('Access denied. Admin credentials required.')
-      await supabase.auth.signOut()
+      if (!profile || profile.role !== 'ADMIN' || profile.status !== 'ACTIVE') {
+        setError('This account does not have active administrator access.')
+        await supabase.auth.signOut()
+        return
+      }
+
+      window.location.href = '/admin/dashboard'
+    } catch {
+      setError('The admin portal is temporarily unavailable. Please try again.')
+    } finally {
       setLoading(false)
-      return
     }
-
-    window.location.href = '/admin/dashboard'
   }
 
   return (
-    <div className="flex flex-col min-h-svh">
-      <div className="flex justify-between items-center px-5 pt-3 text-xs font-semibold">
-        <span>9:41</span><span>●●● WiFi 🔋</span>
-      </div>
+    <main className={styles.page}>
+      <div className={styles.ambientOne} aria-hidden="true" />
+      <div className={styles.ambientTwo} aria-hidden="true" />
 
-      <div className="flex-1 flex flex-col justify-center px-6 pb-10">
-        <div className="text-center mb-10">
-          <h1 className="text-[42px] font-black tracking-[-2.5px] mb-2">QuicKeys</h1>
-          <p className="text-sm text-gray-500 font-medium">Admin Portal</p>
-        </div>
+      <Link href="/" className={styles.backLink}>← Return to QuiKeys</Link>
 
-        <div className="text-center mb-7">
-          <h2 className="text-xl font-bold tracking-tight mb-1">Welcome back</h2>
-          <p className="text-sm text-gray-500">Log in to access the admin dashboard.</p>
-        </div>
+      <section className={styles.card} aria-labelledby="admin-login-title">
+        <header className={styles.header}>
+          <QuicKeysLogo size="md" showWordmark />
+          <span className={styles.portalBadge}>Authorized access</span>
+          <h1 id="admin-login-title">Admin Portal</h1>
+          <p>Review beta applications and manage the QuiKeys experience.</p>
+        </header>
 
-        <form onSubmit={submit} className="space-y-3">
-          <div className="relative">
-            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400">✉</span>
-            <input type="email" placeholder="Email" value={form.email}
-              onChange={e => setForm(p => ({ ...p, email: e.target.value }))}
-              className="w-full pl-10 pr-4 py-4 border-[1.5px] border-gray-200 rounded-xl text-base" />
+        <form onSubmit={submit} className={styles.form}>
+          <div className={styles.field}>
+            <label htmlFor="admin-email">Email address</label>
+            <div className={styles.inputWrap}>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18v12H3z"/><path d="m3 7 9 6 9-6"/></svg>
+              <input
+                id="admin-email"
+                type="email"
+                autoComplete="email"
+                placeholder="admin@quikeys.com"
+                value={form.email}
+                disabled={loading}
+                required
+                onChange={event => setForm(previous => ({ ...previous, email: event.target.value }))}
+              />
+            </div>
           </div>
 
-          <div className="relative">
-            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400">🔒</span>
-            <input type={showPass ? 'text' : 'password'} placeholder="Password" value={form.password}
-              onChange={e => setForm(p => ({ ...p, password: e.target.value }))}
-              className="w-full pl-10 pr-12 py-4 border-[1.5px] border-gray-200 rounded-xl text-base" />
-            <button type="button" onClick={() => setShowPass(p => !p)}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400">
-              {showPass ? '🙈' : '👁'}
-            </button>
+          <div className={styles.field}>
+            <label htmlFor="admin-password">Password</label>
+            <div className={styles.inputWrap}>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+              <input
+                id="admin-password"
+                type={showPassword ? 'text' : 'password'}
+                autoComplete="current-password"
+                placeholder="Enter your password"
+                value={form.password}
+                disabled={loading}
+                required
+                onChange={event => setForm(previous => ({ ...previous, password: event.target.value }))}
+              />
+              <button type="button" className={styles.visibility} onClick={() => setShowPassword(previous => !previous)} aria-label={showPassword ? 'Hide password' : 'Show password'}>
+                {showPassword ? 'Hide' : 'Show'}
+              </button>
+            </div>
           </div>
 
-          {error && <p className="text-red-600 text-sm">{error}</p>}
+          {error && <p className={styles.error} role="alert">{error}</p>}
 
-          <div className="pt-1">
-            <button type="submit" disabled={loading}
-              className="w-full bg-black text-white py-4 rounded-xl font-semibold text-base disabled:opacity-40">
-              {loading ? 'Logging in…' : 'Log In'}
-            </button>
-          </div>
+          <button type="submit" className={styles.submit} disabled={loading}>
+            <span>{loading ? 'Signing in…' : 'Sign in to Admin Portal'}</span>
+            {!loading && <span aria-hidden="true">→</span>}
+          </button>
         </form>
 
-        <div className="text-center mt-10 text-xs text-gray-400 leading-relaxed">
-          QuicKeys Admin Portal<br />
-          Secure access for authorized administrators only.
-        </div>
-      </div>
-    </div>
+        <footer className={styles.footer}>
+          <span className={styles.lock} aria-hidden="true">◇</span>
+          <p><strong>Private and secure</strong><br />Access is limited to authorized QuiKeys administrators.</p>
+        </footer>
+      </section>
+    </main>
   )
 }

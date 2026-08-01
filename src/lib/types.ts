@@ -1,8 +1,10 @@
 // src/lib/types.ts
 
 export type UserRole = 'USER' | 'ADMIN'
-export type UserStatus = 'ACTIVE' | 'SUSPENDED' | 'DEACTIVATED'
+export type UserStatus = 'PENDING_EMAIL' | 'PENDING_APPROVAL' | 'ACTIVE' | 'REJECTED' | 'SUSPENDED' | 'DEACTIVATED'
 export type ConversationStatus = 'active' | 'archived'
+export type ConnectionRequestType = 'STANDARD' | 'QUIKEY'
+export type ConnectionRequestStatus = 'PENDING' | 'ACCEPTED' | 'DECLINED' | 'CANCELLED'
 export type TriggerType = 'CLOSE_CONVERSATION' | 'INACTIVITY'
 export type StateId = 'PAX_GOOD' | 'PAX_NEUTRAL' | 'PAX_NOT_GREAT' | 'PAX_CONFUSED' | 'PAX_DISAPPOINTED'
 export type FeedbackResponse = 'FEEDBACK_YES' | 'FEEDBACK_NOT_QUITE'
@@ -25,6 +27,14 @@ export interface Profile {
   photos: string[]
   role: UserRole
   status: UserStatus
+  age_confirmed_at: string | null
+  terms_accepted_at: string | null
+  privacy_accepted_at: string | null
+  application_submitted_at: string | null
+  approved_at: string | null
+  activated_at: string | null
+  pax_access_started_at: string | null
+  pax_access_ends_at: string | null
   pax_onboarded: boolean
   profile_complete: boolean
   created_at: string
@@ -43,6 +53,20 @@ export interface Conversation {
   other_profile?: Profile
   last_message?: Message
   unread_count?: number
+}
+
+export interface ConnectionRequest {
+  id: string
+  sender_id: string
+  recipient_id: string
+  request_type: ConnectionRequestType
+  prompt_question: string | null
+  prompt_answer: string | null
+  status: ConnectionRequestStatus
+  created_at: string
+  responded_at: string | null
+  sender?: Profile
+  recipient?: Profile
 }
 
 export interface Message {

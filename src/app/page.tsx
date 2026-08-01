@@ -2,6 +2,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
+import { SetupProgress } from '@/components/SetupProgress'
 
 const features = [
   {
@@ -54,11 +55,13 @@ export default function LandingPage() {
     <main className="landing-page">
       <div className="landing-frame" aria-hidden="true" />
 
+      <SetupProgress active={1} />
+
       <header className="landing-brand">
         <div className="landing-mark">
           <Image
             src="/quickeys-icon.png"
-            alt="QuicKeys"
+            alt="QuiKeys"
             width={118}
             height={118}
             priority
@@ -107,7 +110,7 @@ export default function LandingPage() {
         </div>
 
         <p className="landing-footnote">
-          New to QuicKeys?{' '}
+          New to QuiKeys?{' '}
           <Link href="/auth/signup">Learn more</Link>
         </p>
       </footer>

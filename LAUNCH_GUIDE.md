@@ -1,4 +1,4 @@
-# QuicKeys™ V1 — Complete Launch Guide
+# QuiKeys™ V1 — Complete Launch Guide
 
 ## What's Included
 

@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient, createClient } from '@/lib/supabase/server'
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const admin = createAdminClient()
   const { trigger_id, state_id_selected } = await req.json()
   const validStates = ['PAX_GOOD', 'PAX_NEUTRAL', 'PAX_NOT_GREAT', 'PAX_CONFUSED', 'PAX_DISAPPOINTED']
   if (!validStates.includes(state_id_selected)) return NextResponse.json({ error: 'Invalid state_id' }, { status: 400 })
-  const { data, error } = await supabase.from('pax_triggers').update({
+  const { data, error } = await admin.from('pax_triggers').update({
     state_id_selected,
     feedback_response: null,
     feedback_open_text: null,
@@ -21,8 +22,9 @@ export async function PATCH(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const admin = createAdminClient()
   const { trigger_id, feedback_response, feedback_open_text } = await req.json()
-  const { data, error } = await supabase.from('pax_triggers').update({ feedback_response: feedback_response || null, feedback_open_text: feedback_open_text?.trim().slice(0, 300) || null }).eq('id', trigger_id).eq('user_id', user.id).select().single()
+  const { data, error } = await admin.from('pax_triggers').update({ feedback_response: feedback_response || null, feedback_open_text: feedback_open_text?.trim().slice(0, 300) || null }).eq('id', trigger_id).eq('user_id', user.id).select().single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ trigger: data })
 }

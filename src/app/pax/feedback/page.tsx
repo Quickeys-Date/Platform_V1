@@ -14,14 +14,23 @@ function FeedbackContent() {
   const [rating, setRating] = useState<string | null>(null)
   const [openText, setOpenText] = useState('')
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
 
   const submit = async () => {
     setSaving(true)
-    if (triggerId) {
-      await apiFetch('/api/pax', {
+    setSaveError('')
+    try {
+      if (!triggerId) throw new Error('This check-in is no longer available.')
+      const response = await apiFetch('/api/pax', {
         method: 'PATCH',
         body: JSON.stringify({ trigger_id: triggerId, feedback_response: rating || null, feedback_open_text: openText.trim() || null }),
       })
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(data.error || 'We could not save your feedback.')
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : 'We could not save your feedback. Please try again.')
+      setSaving(false)
+      return
     }
     router.push(`/pax/thankyou?triggers=${encodeURIComponent(triggersParam)}&index=${indexParam}&type=${triggerType}`)
   }
@@ -75,6 +84,7 @@ function FeedbackContent() {
       <button className="pax-flow-primary" onClick={submit} disabled={saving}>
         {saving ? 'Saving…' : 'Continue'}
       </button>
+      {saveError && <p role="alert" style={{ color: '#ff9b91', fontSize: 13, lineHeight: 1.5, marginTop: 10, textAlign: 'center' }}>{saveError}</p>}
     </div>
   )
 }

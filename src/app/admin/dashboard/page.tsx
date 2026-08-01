@@ -68,8 +68,9 @@ export default function AdminDashboardPage() {
       return
     }
 
+    const data = await res.json().catch(() => ({}))
+
     if (action === 'EXPORT_DATA') {
-      const data = await res.json()
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a'); a.href = url; a.download = `user_${userId}_export.json`; a.click()
@@ -77,7 +78,8 @@ export default function AdminDashboardPage() {
       return
     }
 
-    toast.success(action === 'APPROVE' ? 'Beta access approved' : action === 'REJECT' ? 'Application rejected' : `${action.charAt(0) + action.slice(1).toLowerCase()} applied`)
+    if (action === 'APPROVE' && data.email_warning) toast.error(data.email_warning)
+    else toast.success(action === 'APPROVE' ? 'Beta access approved and email sent' : action === 'REJECT' ? 'Application rejected' : `${action.charAt(0) + action.slice(1).toLowerCase()} applied`)
     setUsers(prev => prev.map(u => {
       if (u.id !== userId) return u
       if (action === 'SUSPEND') return { ...u, status: 'SUSPENDED' }

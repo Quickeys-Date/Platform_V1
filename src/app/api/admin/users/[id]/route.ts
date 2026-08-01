@@ -45,7 +45,44 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     }).eq('id', params.id).eq('status', 'PENDING_APPROVAL')
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     await admin.from('admin_actions').insert({ admin_id: user.id, action: 'APPROVE', target_user_id: params.id, notes: notes || null })
-    return NextResponse.json({ success: true, status: 'ACTIVE', pax_access_ends_at: endsAt.toISOString() })
+
+    let emailSent = false
+    let emailWarning = ''
+    const recipient = authData.user.email
+    const resendApiKey = process.env.RESEND_API_KEY
+    const fromEmail = process.env.APPROVAL_FROM_EMAIL
+    if (recipient && resendApiKey && fromEmail) {
+      try {
+        const emailResponse = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${resendApiKey}`,
+            'Content-Type': 'application/json',
+            'Idempotency-Key': `beta-approved-${params.id}`,
+          },
+          body: JSON.stringify({
+            from: fromEmail,
+            to: [recipient],
+            subject: 'Your QuiKeys account is approved',
+            text: `Your QuiKeys account has been approved. Sign in to continue: ${process.env.NEXT_PUBLIC_APP_URL || 'https://quikeys-v1.vercel.app'}/auth/signin`,
+          }),
+        })
+        emailSent = emailResponse.ok
+        if (!emailResponse.ok) emailWarning = 'The account was approved, but the approval email could not be sent.'
+      } catch {
+        emailWarning = 'The account was approved, but the approval email could not be sent.'
+      }
+    } else {
+      emailWarning = 'The account was approved. Approval email is not configured yet.'
+    }
+
+    return NextResponse.json({
+      success: true,
+      status: 'ACTIVE',
+      pax_access_ends_at: endsAt.toISOString(),
+      email_sent: emailSent,
+      email_warning: emailWarning || null,
+    })
   }
 
   if (action === 'REJECT') {

@@ -108,7 +108,7 @@ export default function AgeVerificationPage() {
               {age !== null && <small>Calculated age: {age}</small>}
               <label className={styles.confirmCheck}>
                 <input type="checkbox" checked={confirmed} onChange={event => setConfirmed(event.target.checked)} />
-                <span>I confirm that this date of birth is mine and that I am 18 or older.</span>
+                <span>I confirm that I am 18 or older.</span>
               </label>
             </div>
           )}
@@ -118,7 +118,6 @@ export default function AgeVerificationPage() {
             <span>{submitting ? 'Submitting…' : 'Continue to Beta Review'}</span>
             <span aria-hidden="true">→</span>
           </button>
-          <p className={styles.privacyNote}>No government ID is required for the V1 beta.</p>
         </div>
       </section>
     </main>

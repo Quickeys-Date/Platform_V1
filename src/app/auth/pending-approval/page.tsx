@@ -11,7 +11,6 @@ type ReviewStatus = 'PENDING_APPROVAL' | 'REJECTED' | 'SUSPENDED' | 'DEACTIVATED
 export default function PendingApprovalPage() {
   const router = useRouter()
   const [status, setStatus] = useState<ReviewStatus>('LOADING')
-  const [email, setEmail] = useState('')
 
   useEffect(() => {
     const load = async () => {
@@ -26,7 +25,6 @@ export default function PendingApprovalPage() {
         .select('status, profile_complete, pax_onboarded')
         .eq('id', user.id)
         .single()
-      setEmail(user.email || '')
       if (!data || data.status === 'PENDING_EMAIL') {
         router.replace('/auth/age-verification')
       } else if (data.status === 'ACTIVE') {
@@ -68,15 +66,8 @@ export default function PendingApprovalPage() {
         ) : (
           <>
             <div className={styles.symbol}>✓</div>
-            <h1>Your application is under review</h1>
-            <p>Your email and 18+ eligibility are confirmed. The QuiKeys team is reviewing your application for the private V1 beta.</p>
-            <div className={styles.steps}>
-              <div><span>✓</span><p><strong>Account created</strong><small>{email}</small></p></div>
-              <div><span>✓</span><p><strong>Eligibility confirmed</strong><small>Email verified and age 18+</small></p></div>
-              <div className={styles.current}><span>3</span><p><strong>Founder review</strong><small>We&apos;ll update your access after review</small></p></div>
-              <div><span>4</span><p><strong>Meet Pax</strong><small>Begins after approval</small></p></div>
-            </div>
-            <p className={styles.note}>You can close this page and return later. Your application will remain saved.</p>
+            <h1>Your account is under review</h1>
+            <p>The QuiKeys team is reviewing your account. We&apos;ll email you when it is approved.</p>
           </>
         )}
         <button type="button" className={styles.secondary} onClick={signOut}>Sign out</button>

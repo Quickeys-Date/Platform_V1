@@ -1,5 +1,5 @@
-.page { min-height:100svh; padding:clamp(24px,5vw,72px); display:grid; place-items:center; color:#fff; background:radial-gradient(circle at 50% 25%,rgba(13,158,166,.2),transparent 34%),linear-gradient(145deg,#02090a,#061b1e 55%,#021415); }
-.card { width:min(100%,620px); padding:clamp(28px,5vw,52px); display:flex; flex-direction:column; align-items:center; border:1px solid rgba(217,155,52,.38); border-radius:28px; background:rgba(2,16,18,.88); box-shadow:0 26px 80px rgba(0,0,0,.42); text-align:center; }
+.page { min-height:100svh; padding:clamp(10px,1.5vw,24px); display:grid; color:#fff; background:radial-gradient(circle at 50% 25%,rgba(13,158,166,.2),transparent 34%),linear-gradient(145deg,#02090a,#061b1e 55%,#021415); }
+.card { width:100%; min-height:calc(100svh - clamp(20px,3vw,48px)); padding:clamp(28px,5vw,52px); display:flex; flex-direction:column; align-items:center; justify-content:center; border:1px solid rgba(217,155,52,.38); border-radius:20px; background:rgba(2,16,18,.56); box-shadow:inset 0 0 60px rgba(0,0,0,.14); text-align:center; }
 .card img { border-radius:50%; object-fit:cover; }
 .eyebrow { margin:12px 0 24px; color:#d99b34; font-size:11px; font-weight:800; letter-spacing:.16em; text-transform:uppercase; }
 .symbol { width:54px; height:54px; display:grid; place-items:center; border:1px solid #d99b34; border-radius:50%; color:#ffc766; background:rgba(13,158,166,.14); font-size:25px; }
@@ -18,4 +18,4 @@
 .secondary:hover { border-color:#ffc766; background:rgba(255,199,102,.07); }
 .loader { width:30px; height:30px; margin:24px; border:2px solid rgba(255,255,255,.15); border-top-color:#ffc766; border-radius:50%; animation:spin .8s linear infinite; }
 @keyframes spin { to { transform:rotate(360deg); } }
-@media(max-width:600px){.page{padding:16px}.card{padding:30px 22px;border-radius:22px}.steps{margin-top:26px}}
+@media(max-width:600px){.page{padding:8px}.card{min-height:calc(100svh - 16px);padding:30px 22px;border-radius:14px}.steps{margin-top:26px}}

@@ -14,7 +14,7 @@
 .steps small { color:rgba(255,255,255,.47); font-size:12px; }
 .steps .current span { border-color:#ffc766; color:#061b1e; background:#ffc766; box-shadow:0 0 18px rgba(255,199,102,.25); }
 .note { margin:0 0 22px!important; color:#58d9df!important; font-size:12px!important; }
-.secondary { min-width:150px; min-height:44px; padding:0 24px; border:1px solid rgba(217,155,52,.5); border-radius:999px; background:transparent; color:#ffc766; font-weight:700; cursor:pointer; }
+.secondary { min-width:150px; min-height:44px; margin-top:28px; padding:0 24px; border:1px solid rgba(217,155,52,.5); border-radius:999px; background:transparent; color:#ffc766; font-weight:700; cursor:pointer; }
 .secondary:hover { border-color:#ffc766; background:rgba(255,199,102,.07); }
 .loader { width:30px; height:30px; margin:24px; border:2px solid rgba(255,255,255,.15); border-top-color:#ffc766; border-radius:50%; animation:spin .8s linear infinite; }
 @keyframes spin { to { transform:rotate(360deg); } }

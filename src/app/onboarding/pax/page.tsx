@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { PaxMark } from '@/components/PaxMark'
 
 const PAX_RESPONSE_A = `When we're disappointed, it's easy to make ourselves the explanation.
 
@@ -115,7 +116,7 @@ export default function PaxOnboardingPage() {
       {step === 'intro' && (
         <section className="pax-layout pax-intro-layout">
           <div className="pax-content pax-intro-content">
-            <p className="pax-wordmark">Pax™</p>
+            <PaxMark className="pax-wordmark" />
 
             <div className="pax-intro-copy">
               <p className="pax-lead">I&apos;m Pax.</p>
@@ -149,7 +150,7 @@ export default function PaxOnboardingPage() {
       {step === 'example' && (
         <section className="pax-layout">
           <div className="pax-content">
-            <p className="pax-wordmark">Pax™</p>
+            <PaxMark className="pax-wordmark" />
 
             <p className="pax-eyebrow">
               Here&apos;s an example of how Pax works.
@@ -207,7 +208,7 @@ export default function PaxOnboardingPage() {
       {step === 'responds' && (
         <section className="pax-layout">
           <div className="pax-content">
-            <p className="pax-wordmark">Pax™</p>
+            <PaxMark className="pax-wordmark" />
 
             <div className="pax-response-card">
               {selectedResponse.split('\n\n').map((paragraph, index) => (
@@ -240,7 +241,7 @@ export default function PaxOnboardingPage() {
       {step === 'tellmemore' && (
         <section className="pax-layout">
           <div className="pax-content">
-            <p className="pax-wordmark">Pax™</p>
+            <PaxMark className="pax-wordmark" />
 
             <div className="pax-response-card">
               {PAX_TELL_ME_MORE.split('\n\n').map((paragraph, index) => (

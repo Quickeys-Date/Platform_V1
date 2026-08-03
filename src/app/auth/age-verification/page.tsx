@@ -80,7 +80,7 @@ export default function AgeVerificationPage() {
       <header className={styles.header}>
         <button type="button" className={styles.mobileBack} onClick={() => router.back()} aria-label="Go back">←</button>
         <Link className={styles.brand} href="/" aria-label="QuiKeys home">
-          <Image src="/quickeys-icon.png" alt="" width={48} height={48} priority />
+          <Image src="/quikeys-logo.png" alt="" width={48} height={48} style={{ objectFit: 'contain' }} priority />
           <span>QuiKeys™</span>
         </Link>
       </header>

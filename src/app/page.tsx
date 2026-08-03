@@ -60,8 +60,8 @@ export default function LandingPage() {
       <header className="landing-brand">
         <div className="landing-mark">
           <Image
-            src="/quickeys-icon.png"
-            alt="QuiKeys"
+            src="/quikeys-logo.png"
+            alt="QuiKeys heart and key logo"
             width={118}
             height={118}
             priority

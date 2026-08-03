@@ -102,6 +102,38 @@ export default function MyProfilePage() {
     setPhotoUrls(u => u.filter((_, i) => i !== index))
   }
 
+  const replacePhoto = async (index: number, file: File) => {
+    if (!profile) return
+    if (!['image/jpeg', 'image/png'].includes(file.type)) { toast.error('JPG or PNG only.'); return }
+    if (file.size > 5 * 1024 * 1024) { toast.error('Max 5MB per photo.'); return }
+
+    setUploading(true)
+    const oldPath = profile.photos[index]
+    const ext = file.type === 'image/jpeg' ? 'jpg' : 'png'
+    const newPath = `${profile.id}/${Date.now()}.${ext}`
+    const { error: uploadError } = await supabase.storage.from('photos').upload(newPath, file)
+    if (uploadError) {
+      setUploading(false)
+      toast.error('Replacement upload failed. Your existing photo was kept.')
+      return
+    }
+
+    const newPhotos = profile.photos.map((photo, photoIndex) => photoIndex === index ? newPath : photo).slice(0, 3)
+    const { error: updateError } = await supabase.from('profiles').update({ photos: newPhotos }).eq('id', profile.id)
+    if (updateError) {
+      await supabase.storage.from('photos').remove([newPath])
+      setUploading(false)
+      toast.error('Could not replace the photo. Your existing photo was kept.')
+      return
+    }
+
+    await supabase.storage.from('photos').remove([oldPath])
+    setProfile(previous => previous ? { ...previous, photos: newPhotos } : previous)
+    await loadPhotoUrls(newPhotos)
+    setUploading(false)
+    toast.success('Photo replaced.')
+  }
+
   const save = async () => {
     if (!profile) return
     setSaving(true)
@@ -183,7 +215,13 @@ export default function MyProfilePage() {
             {(profile.photos || []).map((_, i) => (
               <div key={i} style={{ position: 'relative', aspectRatio: '1', borderRadius: 12, overflow: 'hidden', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)' }}>
                 {photoUrls[i] ? <img src={photoUrls[i]} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.2)', fontSize: 24 }}>📷</div>}
-                {editing && <button onClick={() => removePhoto(i)} style={{ position: 'absolute', top: 6, right: 6, width: 22, height: 22, background: 'rgba(0,0,0,0.7)', borderRadius: '50%', border: 'none', color: 'white', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>×</button>}
+                {editing && <>
+                  <button onClick={() => removePhoto(i)} aria-label={`Remove photo ${i + 1}`} style={{ position: 'absolute', top: 6, right: 6, width: 22, height: 22, background: 'rgba(0,0,0,0.7)', borderRadius: '50%', border: 'none', color: 'white', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>×</button>
+                  <label style={{ position: 'absolute', left: 8, right: 8, bottom: 8, minHeight: 30, display: 'grid', placeItems: 'center', border: '1px solid rgba(255,199,102,.55)', borderRadius: 999, background: 'rgba(3,25,27,.88)', color: '#FFC766', fontSize: 11, fontWeight: 700, cursor: uploading ? 'wait' : 'pointer' }}>
+                    {uploading ? 'Uploading…' : 'Replace'}
+                    <input type="file" accept="image/jpeg,image/png" disabled={uploading} style={{ display: 'none' }} onChange={event => { const file = event.target.files?.[0]; if (file) replacePhoto(i, file); event.target.value = '' }} />
+                  </label>
+                </>}
               </div>
             ))}
             {editing && (profile.photos || []).length < 3 && (

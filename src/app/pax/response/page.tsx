@@ -2,6 +2,7 @@
 import { Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { PAX_RESPONSES } from '@/lib/pax'
+import { PaxMark } from '@/components/PaxMark'
 
 function ResponseContent() {
   const router = useRouter()
@@ -35,7 +36,7 @@ function ResponseContent() {
 
   return (
     <div className="pax-screen animate-fade-up">
-      <div style={{ fontWeight: 900, fontSize: 18, color: '#FFC766', marginBottom: 24 }}>Pax™</div>
+      <PaxMark style={{ marginBottom: 24 }} />
       <button onClick={changeEmotion} style={{ color: 'rgba(255,255,255,0.55)', fontSize: 13, marginBottom: 10, textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer' }}>← Change emotion</button>
       <div className="flex-1 flex flex-col justify-center">
         <div style={{ background: 'rgba(201,168,76,0.1)', border: '1px solid rgba(201,168,76,0.25)', borderRadius: 16, padding: '24px 20px' }}>

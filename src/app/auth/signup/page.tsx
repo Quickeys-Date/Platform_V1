@@ -160,8 +160,8 @@ export default function SignUpPage() {
       <section className="signup-content">
         <div className="signup-logo">
           <Image
-            src="/quickeys-icon.png"
-            alt="QuiKeys"
+            src="/quikeys-logo.png"
+            alt="QuiKeys heart and key logo"
             width={84}
             height={84}
             priority

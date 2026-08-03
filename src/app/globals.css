@@ -5665,6 +5665,33 @@ body {
   cursor: pointer;
 }
 
+.profile-builder-photo-replace {
+  position: absolute;
+  right: 9px;
+  bottom: 9px;
+  left: 9px;
+  min-height: 30px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255, 199, 102, 0.58);
+  border-radius: 999px;
+  background: rgba(3, 25, 27, 0.9);
+  color: #ffc766;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  backdrop-filter: blur(7px);
+}
+
+.profile-builder-photo-replace:hover {
+  border-color: #ffc766;
+  background: rgba(3, 38, 41, 0.96);
+}
+
+.profile-builder-photo-replace input {
+  display: none;
+}
+
 .profile-builder-textarea {
   width: 100%;
   min-height: 122px;

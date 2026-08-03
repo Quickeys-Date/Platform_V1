@@ -51,6 +51,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     const recipient = authData.user.email
     const resendApiKey = process.env.RESEND_API_KEY
     const fromEmail = process.env.APPROVAL_FROM_EMAIL
+    const appUrl = (process.env.NEXT_PUBLIC_APP_URL || 'https://quikeys-v1.vercel.app').replace(/\/$/, '')
+    const signInUrl = `${appUrl}/auth/signin`
+    const logoUrl = `${appUrl}/quikeys-logo.png`
     if (recipient && resendApiKey && fromEmail) {
       try {
         const emailResponse = await fetch('https://api.resend.com/emails', {
@@ -64,7 +67,28 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
             from: fromEmail,
             to: [recipient],
             subject: 'Your QuiKeys account is approved',
-            text: `Your QuiKeys account has been approved. Sign in to continue: ${process.env.NEXT_PUBLIC_APP_URL || 'https://quikeys-v1.vercel.app'}/auth/signin`,
+            text: `Your QuiKeys account has been approved. Sign in to continue: ${signInUrl}`,
+            html: `
+              <!doctype html>
+              <html lang="en">
+                <body style="margin:0;padding:0;background:#031719;color:#ffffff;font-family:Arial,sans-serif;">
+                  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#031719;padding:36px 18px;">
+                    <tr><td align="center">
+                      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:560px;border:1px solid rgba(217,155,52,.48);border-radius:20px;background:#061b1e;">
+                        <tr><td align="center" style="padding:38px 30px 14px;">
+                          <img src="${logoUrl}" width="86" alt="QuiKeys" style="display:block;width:86px;height:auto;margin:0 auto 14px;" />
+                          <div style="font-family:Georgia,serif;font-size:34px;font-weight:700;line-height:1;color:#ffc766;">QuiKeys™</div>
+                        </td></tr>
+                        <tr><td align="center" style="padding:18px 30px 38px;">
+                          <div style="font-family:Georgia,serif;font-size:29px;line-height:1.25;color:#ffe7b1;">Your account is approved</div>
+                          <p style="margin:18px auto 26px;max-width:390px;color:rgba(255,255,255,.72);font-size:15px;line-height:1.65;">Welcome to the QuiKeys V1 beta. You can now sign in and continue creating your profile.</p>
+                          <a href="${signInUrl}" style="display:inline-block;padding:14px 30px;border-radius:999px;background:#ffc766;color:#071719;font-size:15px;font-weight:700;text-decoration:none;">Sign in to QuiKeys</a>
+                        </td></tr>
+                      </table>
+                    </td></tr>
+                  </table>
+                </body>
+              </html>`,
           }),
         })
         emailSent = emailResponse.ok

@@ -14,7 +14,7 @@
 
 .header { margin-top: 68px; display: flex; align-items: center; justify-content: center; }
 .brand { display: flex; align-items: center; gap: 10px; color: #ffc766; text-decoration: none; font: 600 27px "Playfair Display", Georgia, serif; }
-.brand img { width: 46px; height: 46px; border-radius: 50%; object-fit: cover; }
+.brand img { width: 46px; height: 46px; border-radius: 50%; object-fit: contain; }
 .mobileBack { display: none; }
 
 .progress { width: min(100%, 960px); margin: 28px auto 0; padding: 0; display: grid; grid-template-columns: repeat(5, 1fr); list-style: none; }

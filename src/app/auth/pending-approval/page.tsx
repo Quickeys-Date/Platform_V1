@@ -47,7 +47,7 @@ export default function PendingApprovalPage() {
   return (
     <main className={styles.page}>
       <section className={styles.card}>
-        <Image src="/quickeys-icon.png" alt="QuiKeys" width={78} height={78} priority />
+        <Image src="/quikeys-logo.png" alt="QuiKeys heart and key logo" width={78} height={78} style={{ objectFit: 'contain' }} priority />
         <p className={styles.eyebrow}>QuiKeys™ V1 Beta</p>
         {status === 'LOADING' ? (
           <><h1>Checking your application…</h1><div className={styles.loader} /></>

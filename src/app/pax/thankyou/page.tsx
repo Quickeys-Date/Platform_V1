@@ -1,6 +1,7 @@
 'use client'
 import { Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
+import { PaxMark } from '@/components/PaxMark'
 
 function ThankYouContent() {
   const params = useSearchParams()
@@ -13,8 +14,7 @@ function ThankYouContent() {
 
   return (
     <div className="pax-screen items-center justify-center text-center animate-fade-up">
-      <div style={{ fontWeight: 900, fontSize: 18, color: '#FFC766', marginBottom: 32 }}>Pax™</div>
-      <div style={{ fontSize: 48, marginBottom: 20 }}>✦</div>
+      <PaxMark style={{ margin: '0 auto 32px' }} />
       <h1 style={{ fontSize: 24, fontWeight: 700, color: 'white', marginBottom: 12 }}>Thank you.</h1>
       <p style={{ fontSize: 16, color: 'rgba(255,255,255,0.5)', lineHeight: 1.7, maxWidth: 280, margin: '0 auto 40px' }}>
         The goal isn't to get every interaction right. It's to understand them more clearly.

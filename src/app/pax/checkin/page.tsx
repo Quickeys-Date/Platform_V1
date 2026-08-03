@@ -3,6 +3,7 @@ import { useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { EMOTION_OPTIONS } from '@/lib/pax'
 import { apiFetch } from '@/lib/api'
+import { PaxMark } from '@/components/PaxMark'
 
 function CheckinContent() {
   const router = useRouter()
@@ -49,7 +50,7 @@ function CheckinContent() {
       {/* CR#17: Back button */}
       <button onClick={() => router.back()} style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13, marginBottom: 8, textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer' }}>← Back</button>
 
-      <div style={{ fontWeight: 900, fontSize: 18, color: '#FFC766', marginBottom: 16 }}>Pax™</div>
+      <PaxMark style={{ marginBottom: 16 }} />
 
       {isInactivity && (
         <div style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 14, padding: '14px 16px', marginBottom: 16, fontSize: 13, color: 'rgba(255,255,255,0.55)', lineHeight: 1.6 }}>

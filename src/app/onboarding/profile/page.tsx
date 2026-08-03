@@ -95,6 +95,49 @@ export default function ProfileSetupPage() {
     }))
   }
 
+  const replacePhoto = async (oldPath: string, file: File) => {
+    if (!['image/jpeg', 'image/png'].includes(file.type)) {
+      toast.error('JPG or PNG only.')
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Max 5MB.')
+      return
+    }
+
+    setUploading(true)
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      setUploading(false)
+      toast.error('Please sign in again.')
+      return
+    }
+
+    const ext = file.type === 'image/jpeg' ? 'jpg' : 'png'
+    const newPath = `${user.id}/${Date.now()}.${ext}`
+    const { error } = await supabase.storage.from('photos').upload(newPath, file)
+    if (error) {
+      setUploading(false)
+      toast.error('Replacement upload failed. Your existing photo was kept.')
+      return
+    }
+
+    const { data: signed } = await supabase.storage.from('photos').createSignedUrl(newPath, 3600)
+    setForm(previous => ({
+      ...previous,
+      photos: previous.photos.map(photo => photo === oldPath ? newPath : photo).slice(0, 3),
+    }))
+    setSignedUrls(previous => {
+      const next = { ...previous }
+      delete next[oldPath]
+      if (signed?.signedUrl) next[newPath] = signed.signedUrl
+      return next
+    })
+    await supabase.storage.from('photos').remove([oldPath])
+    setUploading(false)
+    toast.success('Photo replaced.')
+  }
+
   const save = async () => {
     setLoading(true)
     const {
@@ -120,7 +163,7 @@ export default function ProfileSetupPage() {
         age_range_max: form.ageMax,
         location_radius: form.radius,
         connection_prompt: form.connectionPrompt.trim() || null,
-        photos: form.photos,
+        photos: form.photos.slice(0, 3),
         date_of_birth: form.dob || null,
         profile_complete: true,
       })
@@ -450,6 +493,19 @@ export default function ProfileSetupPage() {
                     >
                       ×
                     </button>
+                    <label className="profile-builder-photo-replace">
+                      <span>{uploading ? 'Uploading…' : 'Replace'}</span>
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png"
+                        disabled={uploading}
+                        onChange={event => {
+                          const file = event.target.files?.[0]
+                          if (file) replacePhoto(path, file)
+                          event.target.value = ''
+                        }}
+                      />
+                    </label>
                   </div>
                 ))}
 

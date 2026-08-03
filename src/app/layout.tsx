@@ -5,6 +5,10 @@ import './globals.css'
 export const metadata: Metadata = {
   title: 'QuiKeys™ — A dating app that goes beyond dating',
   description: 'A guided dating experience that helps you navigate what happens after the conversation, not just during it.',
+  icons: {
+    icon: '/quikeys-logo.png',
+    apple: '/quikeys-logo.png',
+  },
 }
 
 export const viewport: Viewport = {

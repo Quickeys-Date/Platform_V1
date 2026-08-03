@@ -2,6 +2,7 @@
 import { useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { apiFetch } from '@/lib/api'
+import { PaxMark } from '@/components/PaxMark'
 
 function FeedbackContent() {
   const router = useRouter()
@@ -50,7 +51,7 @@ function FeedbackContent() {
       {/* CR#17: Back button */}
       <button onClick={changeEmotion} style={{ color: 'rgba(255,255,255,0.55)', fontSize: 13, marginBottom: 8, background: 'none', border: 'none', cursor: 'pointer' }}>← Change emotion</button>
 
-      <div style={{ fontWeight: 900, fontSize: 18, color: '#FFC766', marginBottom: 24 }}>Pax™</div>
+      <PaxMark style={{ marginBottom: 24 }} />
 
       <div style={{ flex: 1 }}>
         <h1 style={{ fontSize: 20, fontWeight: 700, color: 'white', marginBottom: 24 }}>Was this helpful?</h1>

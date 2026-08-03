@@ -1,5 +1,3 @@
-// src/components/QuicKeysLogo.tsx
-// Uses the actual brand artwork (public/quickeys-icon.png) for pixel-perfect accuracy
 import Image from 'next/image'
 
 interface LogoProps {
@@ -8,43 +6,40 @@ interface LogoProps {
   showTagline?: boolean
 }
 
+/** Official QuiKeys brand lockup supplied by the brand team. */
 export function QuicKeysLogo({ size = 'md', showWordmark = true, showTagline = false }: LogoProps) {
   const iconSize = { sm: 44, md: 68, lg: 96, xl: 130 }[size]
-  const wordSize = { sm: 22, md: 32, lg: 46, xl: 60 }[size]
+  const wordmarkWidth = { sm: 118, md: 162, lg: 218, xl: 286 }[size]
+  const wordmarkHeight = Math.round(wordmarkWidth / 4)
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-      <div style={{ width: iconSize, height: iconSize, borderRadius: '50%', overflow: 'hidden', position: 'relative' }}>
+      <div style={{ width: iconSize, height: iconSize, position: 'relative', flexShrink: 0 }}>
         <Image
-          src="/quickeys-icon.png"
-          alt="QuiKeys"
-          width={iconSize}
-          height={iconSize}
-          style={{ objectFit: 'cover', width: '100%', height: '100%' }}
+          src="/quikeys-logo.png"
+          alt="QuiKeys heart and key logo"
+          fill
+          sizes={`${iconSize}px`}
+          style={{ objectFit: 'contain' }}
           priority
         />
       </div>
 
       {showWordmark && (
-        <div style={{ textAlign: 'center' }}>
-          <span style={{
-            fontSize: wordSize,
-            fontFamily: "'Playfair Display', Georgia, 'Times New Roman', serif",
-            fontWeight: 700,
-            background: 'linear-gradient(135deg, #FFE7B1 0%, #FFC766 35%, #D99B34 65%, #FFC766 85%, #FFE7B1 100%)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text',
-            letterSpacing: '-0.01em',
-            display: 'block',
-            lineHeight: 1.1,
-          }}>
-            QuiKeys™
-          </span>
+        <div style={{ textAlign: 'center', width: wordmarkWidth }}>
+          <div style={{ width: wordmarkWidth, height: wordmarkHeight, overflow: 'hidden', position: 'relative' }}>
+            <Image
+              src="/quikeys-wordmark-tm.png"
+              alt="QuiKeys™"
+              fill
+              sizes={`${wordmarkWidth}px`}
+              style={{ objectFit: 'cover', objectPosition: 'center' }}
+            />
+          </div>
           {showTagline && (
             <span style={{
               display: 'block',
-              fontSize: Math.max(9, wordSize * 0.25),
+              fontSize: Math.max(9, wordmarkWidth * 0.065),
               color: 'rgba(255,255,255,0.35)',
               letterSpacing: '0.2em',
               textTransform: 'uppercase',

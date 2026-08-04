@@ -12,17 +12,29 @@ export function QuiKeyCall({ conversationId, userId, otherName }: { conversation
   const [call, setCall] = useState<Call | null>(null)
   const [busy, setBusy] = useState(false)
   const [seconds, setSeconds] = useState(120)
+  const [available, setAvailable] = useState(true)
 
   const refresh = async () => {
-    const response = await apiFetch(`/api/video-calls?conversation_id=${conversationId}`)
-    if (response.ok) setCall((await response.json()).call)
+    try {
+      const response = await apiFetch(`/api/video-calls?conversation_id=${conversationId}`)
+      if (!response.ok) {
+        setAvailable(false)
+        return
+      }
+      const data = await response.json()
+      setAvailable(data.available !== false)
+      setCall(data.call)
+    } catch {
+      setAvailable(false)
+    }
   }
 
   useEffect(() => {
+    if (!available) return
     refresh()
     const timer = window.setInterval(refresh, 2500)
     return () => window.clearInterval(timer)
-  }, [conversationId])
+  }, [conversationId, available])
 
   useEffect(() => {
     if (call?.status !== 'active' || !call.ends_at) return
@@ -48,9 +60,20 @@ export function QuiKeyCall({ conversationId, userId, otherName }: { conversation
   const waiting = call?.status === 'pending' && call.initiated_by === userId
   const active = call?.status === 'active' && call.call_id && call.api_key && call.token && userId
 
+  // Calls are an optional enhancement. If their migration or provider is not
+  // configured, omit the control instead of letting it block normal chat.
+  if (!available) return null
+
   return <>
-    <button type="button" className="chat-video-button" onClick={() => act('initiate')} disabled={busy || Boolean(call)} aria-label="Start a two-minute QuiKey Chat" title="Start QuiKey Chat">
-      <span aria-hidden="true">▻</span>
+    <button type="button" className="chat-video-button" onClick={() => act('initiate')} disabled={busy || Boolean(call)} aria-label="Start a two-minute QuiKey Chat" title="Start a two-minute QuiKey Chat">
+      <span className="chat-video-icon" aria-hidden="true">
+        <svg viewBox="0 0 32 32" role="presentation">
+          <rect x="3.5" y="7" width="18" height="18" rx="5" />
+          <path d="M21.5 12.2 28 9v14l-6.5-3.2" />
+          <path className="chat-video-heart" d="M12.5 20.5s-5-2.8-5-6.2c0-2.6 3.4-3.3 5-1.1 1.6-2.2 5-1.5 5 1.1 0 3.4-5 6.2-5 6.2Z" />
+        </svg>
+      </span>
+      <span className="chat-video-label">2 min</span>
     </button>
 
     {(incoming || waiting || active) && <div className="quikey-call-overlay" role="dialog" aria-modal="true" aria-label="QuiKey Chat">

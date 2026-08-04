@@ -3,6 +3,7 @@
 import {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from 'react'
@@ -48,7 +49,9 @@ function formatConversationTime(value: string | null | undefined) {
 
 export default function ChatPage() {
   const { id } = useParams<{ id: string }>()
-  const supabase = createClient()
+  // Keep one browser client for the lifetime of this screen. Recreating it on
+  // every keystroke caused the load effect and realtime subscription to restart.
+  const supabase = useMemo(() => createClient(), [])
 
   const [conv, setConv] = useState<Conversation | null>(null)
   const [conversations, setConversations] = useState<Conversation[]>([])
@@ -61,9 +64,30 @@ export default function ChatPage() {
     useState(false)
   const [userId, setUserId] = useState<string | null>(null)
   const [lastMsgAge, setLastMsgAge] = useState(0)
+  const [viewport, setViewport] = useState<{ height: number; top: number } | null>(null)
 
   const endRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
+
+  useEffect(() => {
+    const visualViewport = window.visualViewport
+    if (!visualViewport) return
+
+    const syncViewport = () => {
+      setViewport({
+        height: visualViewport.height,
+        top: visualViewport.offsetTop,
+      })
+    }
+
+    syncViewport()
+    visualViewport.addEventListener('resize', syncViewport)
+    visualViewport.addEventListener('scroll', syncViewport)
+    return () => {
+      visualViewport.removeEventListener('resize', syncViewport)
+      visualViewport.removeEventListener('scroll', syncViewport)
+    }
+  }, [])
 
   useEffect(() => {
     endRef.current?.scrollIntoView({
@@ -169,23 +193,38 @@ export default function ChatPage() {
     const content = text.trim()
     setText('')
 
-    const response = await apiFetch(
-      `/api/conversations/${id}/messages`,
-      {
-        method: 'POST',
-        body: JSON.stringify({ content }),
+    try {
+      const response = await apiFetch(
+        `/api/conversations/${id}/messages`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ content }),
+        }
+      )
+
+      const result = await response.json().catch(() => ({}))
+
+      if (!response.ok) {
+        toast.error(result.error || 'Failed to send')
+        setText(content)
+      } else if (result.message) {
+        // Do not make the sender wait for Supabase Realtime. The subscription
+        // below still delivers messages from the other person and de-duplicates
+        // this server-confirmed message when it arrives through realtime.
+        setMessages(previousMessages =>
+          previousMessages.some(message => message.id === result.message.id)
+            ? previousMessages
+            : [...previousMessages, result.message]
+        )
+        setLastMsgAge(0)
       }
-    )
-
-    if (!response.ok) {
-      const error = await response.json()
-
-      toast.error(error.error || 'Failed to send')
+    } catch {
+      toast.error('The message could not be sent. Please try again.')
       setText(content)
+    } finally {
+      setSending(false)
+      inputRef.current?.focus()
     }
-
-    setSending(false)
-    inputRef.current?.focus()
   }
 
   const archiveConversation = async () => {
@@ -248,7 +287,10 @@ export default function ChatPage() {
   })
 
   return (
-    <main className="chat-page">
+    <main
+      className="chat-page"
+      style={viewport ? { height: `${viewport.height}px`, top: `${viewport.top}px`, bottom: 'auto' } : undefined}
+    >
       <aside className="chat-inbox" aria-label="Your conversations">
         <div className="chat-inbox-brand">
           <QuicKeysLogo size="sm" />

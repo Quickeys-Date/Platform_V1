@@ -9,6 +9,16 @@ function getStreamClient() {
   return { apiKey, client: new StreamClient(apiKey, secret) }
 }
 
+function videoCallsUnavailable(error: { code?: string; message?: string } | null) {
+  return Boolean(
+    error && (
+      error.code === 'PGRST205' ||
+      error.code === '42P01' ||
+      error.message?.includes("video_calls")
+    )
+  )
+}
+
 async function getContext(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -38,8 +48,12 @@ export async function GET(req: NextRequest) {
     const context = await getContext(req)
     if ('error' in context) return context.error
     const { supabase, user, conversationId } = context
-    const { data: call } = await supabase.from('video_calls').select('*').eq('conversation_id', conversationId)
+    const { data: call, error } = await supabase.from('video_calls').select('*').eq('conversation_id', conversationId)
       .in('status', ['pending', 'active']).order('created_at', { ascending: false }).limit(1).maybeSingle()
+    // Messaging must remain usable while the optional call migration is not
+    // installed. Background polling receives a quiet feature-status response.
+    if (videoCallsUnavailable(error)) return NextResponse.json({ call: null, available: false })
+    if (error) return NextResponse.json({ call: null, available: false }, { status: 503 })
     if (!call) return NextResponse.json({ call: null })
     if (call.status === 'active' && call.ends_at && new Date(call.ends_at) <= new Date()) {
       await supabase.from('video_calls').update({ status: 'ended', updated_at: new Date().toISOString() }).eq('id', call.id)
@@ -60,8 +74,12 @@ export async function POST(req: NextRequest) {
 
     if (action === 'initiate') {
       if (conversation.status !== 'active') return NextResponse.json({ error: 'This conversation is not active.' }, { status: 400 })
-      const { data: existing } = await supabase.from('video_calls').select('*').eq('conversation_id', conversationId)
+      const { data: existing, error: existingError } = await supabase.from('video_calls').select('*').eq('conversation_id', conversationId)
         .in('status', ['pending', 'active']).order('created_at', { ascending: false }).limit(1).maybeSingle()
+      if (videoCallsUnavailable(existingError)) {
+        return NextResponse.json({ error: 'QuiKey Chat is not available yet.' }, { status: 503 })
+      }
+      if (existingError) return NextResponse.json({ error: 'QuiKey Chat is temporarily unavailable.' }, { status: 503 })
       if (existing) return NextResponse.json({ call: existing })
       const { data: call, error } = await supabase.from('video_calls').insert({ conversation_id: conversationId, initiated_by: user.id }).select().single()
       if (error) return NextResponse.json({ error: error.message }, { status: 500 })

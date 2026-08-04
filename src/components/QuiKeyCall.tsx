@@ -12,7 +12,7 @@ export function QuiKeyCall({ conversationId, userId, otherName }: { conversation
   const [call, setCall] = useState<Call | null>(null)
   const [busy, setBusy] = useState(false)
   const [seconds, setSeconds] = useState(120)
-  const [available, setAvailable] = useState(true)
+  const [available, setAvailable] = useState<boolean | null>(null)
 
   const refresh = async () => {
     try {
@@ -30,7 +30,7 @@ export function QuiKeyCall({ conversationId, userId, otherName }: { conversation
   }
 
   useEffect(() => {
-    if (!available) return
+    if (available === false) return
     refresh()
     const timer = window.setInterval(refresh, 2500)
     return () => window.clearInterval(timer)
@@ -62,7 +62,7 @@ export function QuiKeyCall({ conversationId, userId, otherName }: { conversation
 
   // Calls are an optional enhancement. If their migration or provider is not
   // configured, omit the control instead of letting it block normal chat.
-  if (!available) return null
+  if (available !== true) return null
 
   return <>
     <button type="button" className="chat-video-button" onClick={() => act('initiate')} disabled={busy || Boolean(call)} aria-label="Start a two-minute QuiKey Chat" title="Start a two-minute QuiKey Chat">
@@ -73,7 +73,6 @@ export function QuiKeyCall({ conversationId, userId, otherName }: { conversation
           <path className="chat-video-heart" d="M12.5 20.5s-5-2.8-5-6.2c0-2.6 3.4-3.3 5-1.1 1.6-2.2 5-1.5 5 1.1 0 3.4-5 6.2-5 6.2Z" />
         </svg>
       </span>
-      <span className="chat-video-label">2 min</span>
     </button>
 
     {(incoming || waiting || active) && <div className="quikey-call-overlay" role="dialog" aria-modal="true" aria-label="QuiKey Chat">

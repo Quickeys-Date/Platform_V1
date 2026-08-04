@@ -5065,13 +5065,12 @@ body {
   flex-shrink: 0;
   gap: 7px;
 }
-.chat-video-button { min-width: 48px; height: 48px; padding: 0 12px; display: flex; align-items: center; justify-content: center; gap: 7px; border: 1px solid rgba(217, 155, 52, .65); border-radius: 999px; background: radial-gradient(circle at 35% 25%, rgba(15, 183, 191, .22), transparent 46%), linear-gradient(145deg, rgba(6, 47, 51, .96), rgba(3, 23, 25, .98)); color: var(--gold-bright); cursor: pointer; box-shadow: inset 0 0 0 1px rgba(255, 211, 126, .05), 0 0 18px rgba(15, 183, 191, .09); transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease; }
+.chat-video-button { width: 48px; min-width: 48px; height: 48px; padding: 0; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(217, 155, 52, .65); border-radius: 50%; background: radial-gradient(circle at 35% 25%, rgba(15, 183, 191, .22), transparent 46%), linear-gradient(145deg, rgba(6, 47, 51, .96), rgba(3, 23, 25, .98)); color: var(--gold-bright); cursor: pointer; box-shadow: inset 0 0 0 1px rgba(255, 211, 126, .05), 0 0 18px rgba(15, 183, 191, .09); transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease; }
 .chat-video-button:hover { transform: translateY(-1px); border-color: #ffd77f; box-shadow: inset 0 0 0 1px rgba(255, 211, 126, .1), 0 0 24px rgba(15, 183, 191, .2); }
 .chat-video-button:disabled { opacity: .45; cursor: default; }
 .chat-video-icon { width: 27px; height: 27px; display: grid; place-items: center; }
 .chat-video-icon svg { width: 100%; height: 100%; overflow: visible; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
 .chat-video-icon .chat-video-heart { fill: rgba(217, 155, 52, .18); stroke-width: 1.45; }
-.chat-video-label { color: #76e7eb; font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; white-space: nowrap; }
 .quikey-call-overlay { position: fixed; z-index: 1000; inset: 0; display: grid; place-items: center; padding: 18px; background: rgba(0, 8, 9, .88); backdrop-filter: blur(10px); }
 .quikey-call-card { width: min(100%, 520px); padding: clamp(24px, 5vw, 42px); text-align: center; border: 1px solid rgba(217, 155, 52, .55); border-radius: 24px; background: linear-gradient(150deg, #062326, #020f10); box-shadow: 0 30px 90px rgba(0,0,0,.55); }
 .quikey-call-card h2 { margin: 8px 0 12px; color: var(--gold-bright); font-family: 'Playfair Display', Georgia, serif; font-size: clamp(24px, 4vw, 34px); }
@@ -5087,7 +5086,7 @@ body {
 .quikey-call-video { min-height: 0; overflow: hidden; background: #000; }
 .quikey-call-video, .quikey-call-video > div { width: 100%; height: 100%; }
 @media (max-width: 600px) { .quikey-call-overlay { padding: 0; } .quikey-call-card-active { width: 100%; height: 100svh; border: 0; border-radius: 0; } .quikey-call-actions { flex-direction: column-reverse; } .quikey-call-actions button { width: 100%; } }
-@media (max-width: 520px) { .chat-video-button { min-width: 44px; width: 44px; height: 44px; padding: 0; } .chat-video-icon { width: 25px; height: 25px; } .chat-video-label { display: none; } }
+@media (max-width: 520px) { .chat-video-button { min-width: 44px; width: 44px; height: 44px; } .chat-video-icon { width: 25px; height: 25px; } }
 
 .chat-options {
   display: flex;

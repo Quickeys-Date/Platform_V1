@@ -22,6 +22,7 @@ function formatTime(value: string | null | undefined) {
 
 export default function MessagesPage() {
   const [conversations, setConversations] = useState<Conversation[]>([])
+  const [query, setQuery] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -40,6 +41,14 @@ export default function MessagesPage() {
 
   useEffect(() => { loadMessages() }, [loadMessages])
 
+  const normalizedQuery = query.trim().toLowerCase()
+  const filteredConversations = conversations.filter(conversation => {
+    if (!normalizedQuery) return true
+    const profile = conversation.other_profile as Profile | undefined
+    return [profile?.first_name, conversation.last_message?.content]
+      .some(value => value?.toLowerCase().includes(normalizedQuery))
+  })
+
   return (
     <main className="messages-page">
       <header className="messages-header">
@@ -52,8 +61,24 @@ export default function MessagesPage() {
         ) : conversations.length === 0 ? (
           <div className="messages-state"><span aria-hidden="true">♡</span><h2>No conversations yet</h2><p>When someone accepts a connection request, your conversation will appear here.</p><a href="/feed">Return to Discover</a></div>
         ) : (
-          <section className="messages-list" aria-label="Active conversations">
-            {conversations.map(conversation => {
+          <>
+          <label className="messages-search">
+            <span aria-hidden="true">⌕</span>
+            <input
+              type="search"
+              value={query}
+              onChange={event => setQuery(event.target.value)}
+              placeholder="Search messages"
+              aria-label="Search conversations"
+            />
+          </label>
+          {filteredConversations.length === 0 ? (
+            <div className="messages-search-empty">
+              <h2>No matching conversations</h2>
+              <p>Try searching for a different name or message.</p>
+            </div>
+          ) : <section className="messages-list" aria-label="Active conversations">
+            {filteredConversations.map(conversation => {
               const profile = conversation.other_profile as Profile | undefined
               return <a className="message-row" href={`/chat/${conversation.id}`} key={conversation.id}>
                 <PhotoDisplay photos={profile?.photos || []} size={58} className="message-avatar" />
@@ -61,7 +86,8 @@ export default function MessagesPage() {
                 <span className="message-meta"><time>{formatTime(conversation.last_message_at)}</time>{Boolean(conversation.unread_count) && <b>{conversation.unread_count}</b>}</span>
               </a>
             })}
-          </section>
+          </section>}
+          </>
         )}
       </div>
       <BottomNav active="messages" />

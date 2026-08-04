@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { Conversation, Profile } from '@/lib/types'
+import type { Profile } from '@/lib/types'
 import { BottomNav } from '@/components/BottomNav'
 import { ProfileCard } from '@/components/ProfileCard'
 import { QuicKeysLogo } from '@/components/QuicKeysLogo'
@@ -13,7 +13,6 @@ const FEED_CACHE_TTL = 5 * 60 * 1000
 
 type FeedCache = {
   profiles: Profile[]
-  activeConvs: Conversation[]
   viewer: { first_name: string; photos: string[] } | null
   currentIndex: number
   savedAt: number
@@ -22,7 +21,6 @@ type FeedCache = {
 export default function FeedPage() {
   const [redirecting, setRedirecting] = useState(false)
   const [profiles, setProfiles] = useState<Profile[]>([])
-  const [activeConvs, setActiveConvs] = useState<Conversation[]>([])
   const [feedLoading, setFeedLoading] = useState(true)
   const [feedError, setFeedError] = useState('')
   const [currentIndex, setCurrentIndex] = useState(0)
@@ -69,11 +67,6 @@ export default function FeedPage() {
     if (!background) setFeedLoading(true)
     setFeedError('')
     try {
-      // Conversation counts are secondary. Never hold the profile card behind
-      // that request, which can be slower when returning from another page.
-      const conversationPromise = apiFetch('/api/conversations?status=active')
-        .then(async response => response.ok ? (await response.json()).conversations || [] : [])
-        .catch(() => [] as Conversation[])
       const feedResponse = await apiFetch('/api/profiles/feed')
       if (feedResponse.status === 401) {
         window.location.href = '/auth/signin'
@@ -91,12 +84,10 @@ export default function FeedPage() {
       setCurrentIndex(preservedIndex)
       sessionStorage.setItem(FEED_CACHE_KEY, JSON.stringify({
         profiles: nextProfiles,
-        activeConvs: [],
         viewer: nextViewer,
         currentIndex: preservedIndex,
         savedAt: Date.now(),
       } satisfies FeedCache))
-      void conversationPromise.then(conversations => setActiveConvs(conversations))
     } catch {
       if (!background) setFeedError('We could not load your connections. Please try again.')
     } finally {
@@ -114,7 +105,6 @@ export default function FeedPage() {
         const cache = JSON.parse(rawCache) as FeedCache
         if (Date.now() - cache.savedAt < FEED_CACHE_TTL && cache.profiles.length) {
           setProfiles(cache.profiles)
-          setActiveConvs(cache.activeConvs || [])
           setViewer(cache.viewer || null)
           setCurrentIndex(Math.min(cache.currentIndex || 0, cache.profiles.length - 1))
           preservedProfileId = cache.profiles[Math.min(cache.currentIndex || 0, cache.profiles.length - 1)]?.id || ''
@@ -133,13 +123,12 @@ export default function FeedPage() {
     try {
       sessionStorage.setItem(FEED_CACHE_KEY, JSON.stringify({
         profiles,
-        activeConvs,
         viewer,
         currentIndex,
         savedAt: Date.now(),
       } satisfies FeedCache))
     } catch { /* The feed still works when browser storage is unavailable. */ }
-  }, [profiles, activeConvs, viewer, currentIndex, feedLoading])
+  }, [profiles, viewer, currentIndex, feedLoading])
 
   const sendConnectionRequest = async (profileId: string, requestType: 'STANDARD' | 'QUIKEY', promptAnswer = '') => {
     setRequestSending(true)
@@ -191,7 +180,6 @@ export default function FeedPage() {
           <section className="feed-section discover-section">
             <div className="discover-heading">
               <div><p>Discover</p><h1>One meaningful connection at a time.</h1></div>
-              {activeConvs.length > 0 && <button type="button" onClick={() => window.location.href = '/messages'}>Messages <span>{activeConvs.length}</span></button>}
             </div>
             {requestMessage && <p className="discover-request-message" role="status">{requestMessage}</p>}
 

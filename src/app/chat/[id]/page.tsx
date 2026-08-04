@@ -8,13 +8,16 @@ import {
 } from 'react'
 import { useParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import type { Message, Conversation } from '@/lib/types'
+import type { Message, Conversation, Profile } from '@/lib/types'
+import { PhotoDisplay } from '@/components/PhotoDisplay'
+import { QuicKeysLogo } from '@/components/QuicKeysLogo'
 import {
   CloseConversationModal,
   UnmatchConfirmModal,
 } from '@/components/CloseConversationModal'
 import { apiFetch } from '@/lib/api'
 import toast from 'react-hot-toast'
+import { QuiKeyCall } from '@/components/QuiKeyCall'
 
 function getAge(dob: string | null | undefined): string {
   if (!dob) return ''
@@ -27,11 +30,29 @@ function getAge(dob: string | null | undefined): string {
   return age > 0 ? `, ${age}` : ''
 }
 
+function getConversationPreview(conversation: Conversation) {
+  const content = conversation.last_message?.content
+  if (!content) return 'Start your conversation with intention.'
+  return content.length > 54 ? `${content.slice(0, 54)}…` : content
+}
+
+function formatConversationTime(value: string | null | undefined) {
+  if (!value) return ''
+  const date = new Date(value)
+  const today = new Date()
+  if (date.toDateString() === today.toDateString()) {
+    return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+  }
+  return date.toLocaleDateString([], { month: 'short', day: 'numeric' })
+}
+
 export default function ChatPage() {
   const { id } = useParams<{ id: string }>()
   const supabase = createClient()
 
   const [conv, setConv] = useState<Conversation | null>(null)
+  const [conversations, setConversations] = useState<Conversation[]>([])
+  const [conversationSearch, setConversationSearch] = useState('')
   const [messages, setMessages] = useState<Message[]>([])
   const [text, setText] = useState('')
   const [sending, setSending] = useState(false)
@@ -59,22 +80,24 @@ export default function ChatPage() {
 
     setUserId(user.id)
 
-    for (const status of ['active', 'archived']) {
-      const response = await apiFetch(
-        `/api/conversations?status=${status}`
+    const activeResponse = await apiFetch('/api/conversations?status=active')
+    const activeData = await activeResponse.json()
+    const activeConversations = activeData.conversations || []
+    setConversations(activeConversations)
+
+    const activeConversation = activeConversations.find(
+      (conversation: Conversation) => conversation.id === id
+    )
+
+    if (activeConversation) {
+      setConv(activeConversation)
+    } else {
+      const archivedResponse = await apiFetch('/api/conversations?status=archived')
+      const archivedData = await archivedResponse.json()
+      const archivedConversation = archivedData.conversations?.find(
+        (conversation: Conversation) => conversation.id === id
       )
-
-      const data = await response.json()
-
-      const found = data.conversations?.find(
-        (conversation: Conversation) =>
-          conversation.id === id
-      )
-
-      if (found) {
-        setConv(found)
-        break
-      }
+      if (archivedConversation) setConv(archivedConversation)
     }
 
     const messageResponse = await apiFetch(
@@ -217,17 +240,98 @@ export default function ChatPage() {
     lastMsgAge >= 48 &&
     messages.length > 0
 
+  const filteredConversations = conversations.filter(conversation => {
+    const profile = conversation.other_profile as Profile | undefined
+    return (profile?.first_name || '')
+      .toLowerCase()
+      .includes(conversationSearch.trim().toLowerCase())
+  })
+
   return (
     <main className="chat-page">
+      <aside className="chat-inbox" aria-label="Your conversations">
+        <div className="chat-inbox-brand">
+          <QuicKeysLogo size="sm" />
+        </div>
+
+        <div className="chat-inbox-heading">
+          <a
+            href="/feed"
+            className="chat-inbox-home"
+            aria-label="Return to Discover"
+            title="Return to Discover"
+          >
+            ←
+          </a>
+          <div>
+            <span>Connections</span>
+            <h1>Messages</h1>
+          </div>
+        </div>
+
+        <label className="chat-inbox-search">
+          <span aria-hidden="true">⌕</span>
+          <span className="sr-only">Search conversations</span>
+          <input
+            type="search"
+            value={conversationSearch}
+            onChange={event => setConversationSearch(event.target.value)}
+            placeholder="Search messages"
+          />
+        </label>
+
+        <nav className="chat-inbox-list">
+          {filteredConversations.map(conversation => {
+            const profile = conversation.other_profile as Profile | undefined
+            const isCurrent = conversation.id === id
+
+            return (
+              <a
+                key={conversation.id}
+                href={`/chat/${conversation.id}`}
+                className={`chat-inbox-row${isCurrent ? ' chat-inbox-row-active' : ''}`}
+                aria-current={isCurrent ? 'page' : undefined}
+              >
+                <PhotoDisplay
+                  photos={profile?.photos || []}
+                  size={48}
+                  className="chat-inbox-avatar"
+                />
+                <span className="chat-inbox-copy">
+                  <strong>{profile?.first_name || 'QuiKeys member'}</strong>
+                  <small>{getConversationPreview(conversation)}</small>
+                </span>
+                <span className="chat-inbox-meta">
+                  <time>{formatConversationTime(conversation.last_message_at)}</time>
+                  {Boolean(conversation.unread_count) && !isCurrent && (
+                    <b>{conversation.unread_count}</b>
+                  )}
+                </span>
+              </a>
+            )
+          })}
+
+          {filteredConversations.length === 0 && (
+            <p className="chat-inbox-empty">No conversations found.</p>
+          )}
+        </nav>
+
+        <a className="chat-inbox-footer" href="/feed">
+          <span aria-hidden="true">♡</span>
+          Discover connections
+        </a>
+      </aside>
+
       <section className="chat-shell">
         <header className="chat-header">
           <button
             type="button"
             onClick={() => {
-              window.location.href = '/feed'
+              window.location.href = '/messages'
             }}
             className="chat-back"
-            aria-label="Return to connections"
+            aria-label="Return to messages"
+            title="Return to messages"
           >
             ←
           </button>
@@ -260,6 +364,9 @@ export default function ChatPage() {
           )}
 
           <div className="chat-header-actions">
+            {!isArchived && conv && (
+              <QuiKeyCall conversationId={conv.id} userId={userId} otherName={other?.first_name || 'your connection'} />
+            )}
             {!isArchived && (
               <button
                 type="button"

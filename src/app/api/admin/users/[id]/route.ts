@@ -71,18 +71,18 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
             html: `
               <!doctype html>
               <html lang="en">
-                <body style="margin:0;padding:0;background:#031719;color:#ffffff;font-family:Arial,sans-serif;">
-                  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#031719;padding:36px 18px;">
+                <body style="margin:0;padding:0;background:#f5f3ed;color:#102629;font-family:Arial,sans-serif;">
+                  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f5f3ed;padding:32px 16px;">
                     <tr><td align="center">
-                      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:560px;border:1px solid rgba(217,155,52,.48);border-radius:20px;background:#061b1e;">
-                        <tr><td align="center" style="padding:38px 30px 14px;">
-                          <img src="${logoUrl}" width="86" alt="QuiKeys" style="display:block;width:86px;height:auto;margin:0 auto 14px;" />
-                          <div style="font-family:Georgia,serif;font-size:34px;font-weight:700;line-height:1;color:#ffc766;">QuiKeys™</div>
+                      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:560px;border:1px solid #d8c79f;border-radius:16px;background:#ffffff;">
+                        <tr><td align="center" style="padding:34px 28px 16px;">
+                          <img src="${logoUrl}" width="72" alt="QuiKeys" style="display:block;width:72px;height:auto;margin:0 auto 12px;" />
+                          <div style="font-family:Georgia,serif;font-size:32px;font-weight:700;line-height:1;color:#b77b22;">QuiKeys™</div>
                         </td></tr>
-                        <tr><td align="center" style="padding:18px 30px 38px;">
-                          <div style="font-family:Georgia,serif;font-size:29px;line-height:1.25;color:#ffe7b1;">Your account is approved</div>
-                          <p style="margin:18px auto 26px;max-width:390px;color:rgba(255,255,255,.72);font-size:15px;line-height:1.65;">Welcome to the QuiKeys V1 beta. You can now sign in and continue creating your profile.</p>
-                          <a href="${signInUrl}" style="display:inline-block;padding:14px 30px;border-radius:999px;background:#ffc766;color:#071719;font-size:15px;font-weight:700;text-decoration:none;">Sign in to QuiKeys</a>
+                        <tr><td align="center" style="padding:14px 28px 36px;">
+                          <div style="font-family:Georgia,serif;font-size:26px;line-height:1.3;color:#102629;">Your account is approved</div>
+                          <p style="margin:16px auto 24px;max-width:390px;color:#56676a;font-size:15px;line-height:1.6;">Welcome to the QuiKeys V1 beta. You can now sign in and continue creating your profile.</p>
+                          <a href="${signInUrl}" style="display:inline-block;padding:13px 28px;border-radius:999px;background:#063b3f;color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;">Sign in to QuiKeys</a>
                         </td></tr>
                       </table>
                     </td></tr>

@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import { Toaster } from 'react-hot-toast'
+import { IncomingCallListener } from '@/components/IncomingCallListener'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -24,6 +25,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <div className="app-shell">
           {children}
         </div>
+        <IncomingCallListener />
         <Toaster
           position="top-center"
           toastOptions={{

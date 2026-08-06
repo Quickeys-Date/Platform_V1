@@ -66,7 +66,7 @@ export default function RequestsPage() {
           const profile = tab === 'incoming' ? request.sender : request.recipient
           return <article className="request-card" key={request.id}>
             <RequestIdentity profile={profile} />
-            {request.request_type === 'QUIKEY' ? <div className="request-quikey"><span>QuiKey opener</span><h2>{request.prompt_question}</h2><p>“{request.prompt_answer}”</p></div> : <p className="request-standard">Sent you a sincere connection request.</p>}
+            {request.request_type === 'QUIKEY' ? <div className="request-quikey"><span>{tab === 'incoming' ? 'QuiKey opener sent to you' : 'Your QuiKey opener'}</span><h2>{request.prompt_question}</h2><p>“{request.prompt_answer}”</p></div> : <p className="request-standard">{tab === 'incoming' ? `${profile?.first_name || 'This member'} sent you a sincere connection request.` : `You sent ${profile?.first_name || 'this member'} a sincere connection request.`}</p>}
             {tab === 'incoming' ? <div className="request-actions"><button type="button" className="request-decline" disabled={workingId === request.id} onClick={() => respond(request, 'decline')}>Decline</button><button type="button" className="request-accept" disabled={workingId === request.id} onClick={() => respond(request, 'accept')}>{workingId === request.id ? 'Please wait…' : 'Accept & Connect'}</button></div> : <div className="request-pending">Waiting for their response</div>}
           </article>
         })}</div>}

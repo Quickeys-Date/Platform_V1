@@ -109,10 +109,6 @@ export default function LandingPage() {
           </Link>
         </div>
 
-        <p className="landing-footnote">
-          New to QuiKeys?{' '}
-          <Link href="/auth/signup">Learn more</Link>
-        </p>
       </footer>
     </main>
   )

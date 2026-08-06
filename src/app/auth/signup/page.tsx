@@ -101,11 +101,24 @@ export default function SignUpPage() {
       })
 
       if (error) {
-        if (error.message.includes('already registered')) {
+        const message = error.message.toLowerCase()
+
+        if (
+          message.includes('already registered') ||
+          message.includes('already exists') ||
+          message.includes('user already')
+        ) {
           setErrors({
             email:
               'An account with this email already exists.',
           })
+        } else if (
+          message.includes('rate limit') ||
+          message.includes('security purposes')
+        ) {
+          toast.error(
+            'Please wait a moment before trying to create another account.'
+          )
         } else {
           toast.error(error.message)
         }
@@ -113,30 +126,30 @@ export default function SignUpPage() {
         return
       }
 
-      if (data.user) {
-        const profileResponse = await fetch(
-          '/api/profiles/create',
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              user_id: data.user.id,
-              email: form.email.trim(),
-              date_of_birth: form.dob,
-              accepted_terms: form.terms,
-            }),
-          }
-        )
-
-        if (!profileResponse.ok) {
-          toast.error(
-            'Your account was created, but the profile could not be initialized.'
-          )
-          return
-        }
+      // Supabase may intentionally return a user with no identity when the
+      // address is already registered. Treat that as an existing account
+      // instead of showing a misleading verification screen.
+      if (
+        data.user &&
+        Array.isArray(data.user.identities) &&
+        data.user.identities.length === 0
+      ) {
+        setErrors({
+          email: 'An account with this email already exists.',
+        })
+        return
       }
+
+      if (!data.user) {
+        toast.error(
+          'The account could not be created. Please try again.'
+        )
+        return
+      }
+
+      // The on_auth_user_created database trigger creates the profile in the
+      // same transaction as the auth user. Calling /api/profiles/create here
+      // duplicated that work and could report a false failure after signup.
 
       window.location.href =
         '/auth/verify?email=' +

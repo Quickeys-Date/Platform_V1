@@ -3,7 +3,7 @@
 // Founders access only. Role-gated.
 // Analytics sections: Daily Snapshot, Pax Performance, User Patterns, Raw Feedback, Reports Queue
 // Moderation: Suspend, Restore, Deactivate, Remove Photo, Export Data — all logged
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { PAX_RESPONSES } from '@/lib/pax'
@@ -19,17 +19,25 @@ const EMOTION_LABELS: Record<string, string> = {
 
 export default function AdminDashboardPage() {
   const router = useRouter()
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   const [activeTab, setActiveTab] = useState<Tab>('dashboard')
   const [stats, setStats] = useState<any>(null)
   const [users, setUsers] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
+  const [feedbackFilter, setFeedbackFilter] = useState<'ALL' | 'OPEN' | 'ADDRESSED'>('ALL')
+  const [feedbackWorkingId, setFeedbackWorkingId] = useState('')
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    const now = new Date()
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+  })
 
   useEffect(() => {
     const loadAdmin = async () => {
+      setLoading(true)
+      setLoadError('')
       try {
-        const response = await fetch('/api/admin/stats')
+        const response = await fetch(`/api/admin/stats?month=${encodeURIComponent(selectedMonth)}`, { cache: 'no-store' })
         if (response.status === 401 || response.status === 403) {
           router.replace('/admin/login')
           return
@@ -38,14 +46,7 @@ export default function AdminDashboardPage() {
 
         const data = await response.json()
         setStats(data)
-
-        const { data: userData, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('role', 'USER')
-          .order('created_at', { ascending: false })
-        if (error) throw error
-        setUsers(userData || [])
+        setUsers(data.users || [])
       } catch {
         setLoadError('The admin dashboard could not be loaded.')
       } finally {
@@ -54,7 +55,7 @@ export default function AdminDashboardPage() {
     }
 
     loadAdmin()
-  }, []) // eslint-disable-line
+  }, [router, selectedMonth])
 
   const modUser = async (userId: string, action: string, reason?: string) => {
     const res = await fetch(`/api/admin/users/${userId}`, {
@@ -99,6 +100,32 @@ export default function AdminDashboardPage() {
     })
     toast.success('Report dismissed')
     setStats((s: any) => s ? { ...s, reportQueue: s.reportQueue.filter((r: any) => r.id !== reportId) } : s)
+  }
+
+  const updateFeedbackStatus = async (feedbackId: string, status: 'OPEN' | 'ADDRESSED') => {
+    setFeedbackWorkingId(feedbackId)
+    const response = await fetch(`/api/admin/feedback/${feedbackId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status }),
+    })
+    const data = await response.json().catch(() => ({}))
+    setFeedbackWorkingId('')
+    if (!response.ok) {
+      toast.error(data.error || 'Unable to update feedback')
+      return
+    }
+    setStats((current: any) => {
+      if (!current) return current
+      const items = (current.openFeedback || []).map((item: any) => item.id === feedbackId ? { ...item, ...data.feedback } : item)
+      return {
+        ...current,
+        openFeedback: items,
+        openFeedbackCount: items.filter((item: any) => item.feedback_status === 'OPEN').length,
+        addressedFeedbackCount: items.filter((item: any) => item.feedback_status === 'ADDRESSED').length,
+      }
+    })
+    toast.success(status === 'ADDRESSED' ? 'Feedback marked as addressed' : 'Feedback reopened')
   }
 
   const signOut = async () => { await supabase.auth.signOut(); window.location.href = '/' }
@@ -157,14 +184,20 @@ export default function AdminDashboardPage() {
               {/* ── DASHBOARD — Daily Snapshot ── */}
               {activeTab === 'dashboard' && stats && (
                 <>
-                  <div className="mb-4">
-                    <h1 className="text-xl font-black tracking-tight">Dashboard</h1>
-                    <p className="text-xs text-gray-500">Overview of key metrics and activity.</p>
+                  <div className={`${styles.dashboardHeading} mb-4`}>
+                    <div>
+                      <h1 className="text-xl font-black tracking-tight">Dashboard</h1>
+                      <p className="text-xs text-gray-500">All-time totals with month-by-month activity.</p>
+                    </div>
+                    <label className={styles.monthPicker}>
+                      <span>Analytics month</span>
+                      <input type="month" value={selectedMonth} max={`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`} onChange={event => setSelectedMonth(event.target.value)} />
+                    </label>
                   </div>
 
                   {/* Daily Snapshot */}
                   <div className="mb-2">
-                    <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Daily Snapshot</h2>
+                    <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">All-time totals</h2>
                     <div className="grid grid-cols-2 gap-2 mb-4">
                       {[
                         { label: 'Total Users', value: (stats.totalUsers || 0).toLocaleString(), sub: `+${stats.newSignups || 0} this week`, pos: true, icon: '👤', tab: 'users' as Tab },
@@ -188,20 +221,71 @@ export default function AdminDashboardPage() {
                     </div>
                   </div>
 
+                  <div className="mb-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider">{stats.monthLabel} activity</h2>
+                      <span className="text-[10px] text-gray-500">Totals continue accumulating in the database</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      {[
+                        { label: 'New users', value: stats.periodSignups || 0 },
+                        { label: 'Conversations started', value: stats.periodConversations || 0 },
+                        { label: 'Pax interactions', value: stats.periodPax || 0 },
+                        { label: 'Reports submitted', value: stats.periodReports || 0 },
+                      ].map(metric => (
+                        <div key={metric.label} className="bg-white border border-gray-200 rounded-xl p-3">
+                          <div className="text-xs text-gray-500 mb-1">{metric.label}</div>
+                          <div className="text-2xl font-black tracking-tight">{Number(metric.value).toLocaleString()}</div>
+                          <div className="text-[10px] text-gray-400 mt-1">{stats.monthLabel}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="bg-white border border-gray-200 rounded-xl p-4 mb-4">
+                    <div className="flex items-start justify-between gap-4 mb-3">
+                      <div>
+                        <h2 className="font-bold text-sm">Complete month history</h2>
+                        <p className="text-[10px] text-gray-400 mt-1">Like a contribution timeline, every recorded month remains visible. Select a month to inspect its daily activity.</p>
+                      </div>
+                      <span className="text-[10px] text-gray-400">{(stats.monthlyHistory || []).length} months</span>
+                    </div>
+                    <div className={styles.monthHistory}>
+                      {(stats.monthlyHistory || []).map((month: any) => {
+                        const activity = month.signups + month.conversations + month.pax + month.reports
+                        const maxActivity = Math.max(...(stats.monthlyHistory || []).map((item: any) => item.signups + item.conversations + item.pax + item.reports), 1)
+                        const level = activity === 0 ? 0 : Math.max(1, Math.ceil((activity / maxActivity) * 4))
+                        return (
+                          <button type="button" key={month.month} onClick={() => setSelectedMonth(month.month)} className={`${styles.monthCell} ${selectedMonth === month.month ? styles.monthCellActive : ''}`} title={`${month.label}: ${month.signups} users, ${month.conversations} conversations, ${month.pax} Pax interactions, ${month.reports} reports`}>
+                            <span className={`${styles.monthActivity} ${styles[`monthLevel${level}`]}`} aria-hidden="true" />
+                            <strong>{month.label}</strong>
+                            <small>{activity} events</small>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+
                   {/* Sign-ups chart */}
                   <div className="bg-white border border-gray-200 rounded-xl p-4 mb-4">
-                    <h2 className="font-bold text-sm mb-4">Sign Ups Over Time</h2>
-                    <div className="flex items-end gap-1.5" style={{ height: 80 }}>
+                    <div className="flex items-center justify-between mb-4">
+                      <h2 className="font-bold text-sm">Daily sign-ups — {stats.monthLabel}</h2>
+                      <strong className="text-xs" style={{ color: '#FFC766' }}>{stats.periodSignups || 0} total</strong>
+                    </div>
+                    <div className={styles.chartScroller}>
+                    <div className="flex items-end gap-1.5" style={{ height: 100, minWidth: 720 }}>
                       {(stats.signupTrend || []).map((d: any, i: number) => {
                         const max = Math.max(...(stats.signupTrend || []).map((x: any) => x.count), 1)
                         return (
                           <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                            <span className="text-[9px] text-gray-400">{d.count || ''}</span>
                             <div className="w-full bg-black rounded-sm"
                               style={{ height: `${Math.max(3, (d.count / max) * 64)}px` }} />
                             <span className="text-[9px] text-gray-400">{d.date.split(' ')[1]}</span>
                           </div>
                         )
                       })}
+                    </div>
                     </div>
                   </div>
 
@@ -500,25 +584,39 @@ export default function AdminDashboardPage() {
               {/* ── RAW FEEDBACK ── */}
               {activeTab === 'feedback' && stats && (
                 <>
-                  <div className="mb-4">
-                    <h1 className="text-xl font-black tracking-tight">Raw Feedback</h1>
-                    <p className="text-xs text-gray-500">All open text responses, with state ID and timestamp.</p>
-                  </div>
-                  {(stats.openFeedback || []).length === 0 ? (
-                    <div className="text-center py-12 text-gray-400 text-sm bg-white rounded-xl border border-gray-200">
-                      No open text feedback yet.
+                  <div className={`${styles.feedbackHeading} mb-4`}>
+                    <div>
+                      <h1 className="text-xl font-black tracking-tight">Raw Feedback</h1>
+                      <p className="text-xs text-gray-500">A permanent history of every open-text response. Addressing an item never deletes it.</p>
                     </div>
-                  ) : (stats.openFeedback || []).map((f: any, i: number) => (
-                    <div key={i} className="bg-white border border-gray-200 rounded-xl p-4 mb-3">
+                    <div className={styles.feedbackFilters} role="group" aria-label="Filter feedback">
+                      {(['ALL', 'OPEN', 'ADDRESSED'] as const).map(filter => (
+                        <button type="button" key={filter} className={feedbackFilter === filter ? styles.feedbackFilterActive : ''} onClick={() => setFeedbackFilter(filter)}>
+                          {filter === 'ALL' ? `All ${(stats.openFeedback || []).length}` : filter === 'OPEN' ? `Open ${stats.openFeedbackCount || 0}` : `Addressed ${stats.addressedFeedbackCount || 0}`}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  {(stats.openFeedback || []).filter((item: any) => feedbackFilter === 'ALL' || item.feedback_status === feedbackFilter).length === 0 ? (
+                    <div className="text-center py-12 text-gray-400 text-sm bg-white rounded-xl border border-gray-200">
+                      No feedback matches this filter.
+                    </div>
+                  ) : (stats.openFeedback || []).filter((item: any) => feedbackFilter === 'ALL' || item.feedback_status === feedbackFilter).map((f: any) => (
+                    <div key={f.id} className={`bg-white border border-gray-200 rounded-xl p-4 mb-3 ${f.feedback_status === 'ADDRESSED' ? styles.feedbackAddressed : ''}`}>
                       <div className="flex justify-between items-center mb-2">
-                        <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full font-medium">
-                          {PAX_RESPONSES[f.state_id_selected]?.emoji} {EMOTION_LABELS[f.state_id_selected]}
-                        </span>
-                        <span className="text-[10px] text-gray-400">
-                          {new Date(f.created_at).toLocaleString()}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full font-medium">{PAX_RESPONSES[f.state_id_selected]?.emoji} {EMOTION_LABELS[f.state_id_selected]}</span>
+                          <span className={f.feedback_status === 'ADDRESSED' ? styles.addressedBadge : styles.openBadge}>{f.feedback_status === 'ADDRESSED' ? 'Addressed' : 'Open'}</span>
+                        </div>
+                        <span className="text-[10px] text-gray-400">{new Date(f.created_at).toLocaleString()}</span>
                       </div>
                       <p className="text-sm text-gray-700 italic leading-relaxed">"{f.feedback_open_text}"</p>
+                      <div className={styles.feedbackFooter}>
+                        <span>{f.feedback_status === 'ADDRESSED' && f.feedback_addressed_at ? `Addressed ${new Date(f.feedback_addressed_at).toLocaleString()}` : 'Needs developer review'}</span>
+                        <button type="button" disabled={feedbackWorkingId === f.id} onClick={() => updateFeedbackStatus(f.id, f.feedback_status === 'ADDRESSED' ? 'OPEN' : 'ADDRESSED')}>
+                          {feedbackWorkingId === f.id ? 'Saving…' : f.feedback_status === 'ADDRESSED' ? 'Reopen' : 'Mark Addressed'}
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </>

@@ -55,6 +55,10 @@ export async function GET(req: NextRequest) {
     if (videoCallsUnavailable(error)) return NextResponse.json({ call: null, available: false })
     if (error) return NextResponse.json({ call: null, available: false }, { status: 503 })
     if (!call) return NextResponse.json({ call: null })
+    if (call.status === 'pending' && Date.now() - new Date(call.created_at).getTime() >= 30_000) {
+      await supabase.from('video_calls').update({ status: 'ended', updated_at: new Date().toISOString() }).eq('id', call.id)
+      return NextResponse.json({ call: null })
+    }
     if (call.status === 'active' && call.ends_at && new Date(call.ends_at) <= new Date()) {
       await supabase.from('video_calls').update({ status: 'ended', updated_at: new Date().toISOString() }).eq('id', call.id)
       return NextResponse.json({ call: null })
@@ -104,6 +108,28 @@ export async function POST(req: NextRequest) {
       const endsAt = new Date(now.getTime() + 120_000)
       const streamCallId = `quikey-${call.id}`
       const { client } = getStreamClient()
+
+      // Stream requires every call member to exist in the Stream app before
+      // getOrCreate is called. Keep this server-side so the API secret is
+      // never exposed to either browser.
+      const participantIds = [conversation.initiator_id, conversation.recipient_id]
+      const { data: participantProfiles } = await supabase
+        .from('profiles')
+        .select('id, first_name, photos')
+        .in('id', participantIds)
+      const profilesById = new Map((participantProfiles || []).map(profile => [profile.id, profile]))
+      await client.upsertUsers(participantIds.map(id => {
+        const profile = profilesById.get(id)
+        const image = Array.isArray(profile?.photos) && typeof profile.photos[0] === 'string'
+          ? profile.photos[0]
+          : undefined
+        return {
+          id,
+          name: profile?.first_name || 'QuiKeys member',
+          ...(image ? { image } : {}),
+        }
+      }))
+
       await client.video.call('default', streamCallId).getOrCreate({
         data: {
           created_by_id: call.initiated_by,

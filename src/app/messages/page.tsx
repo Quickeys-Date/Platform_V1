@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import Link from 'next/link'
 import { BottomNav } from '@/components/BottomNav'
 import { PhotoDisplay } from '@/components/PhotoDisplay'
 import type { Conversation, Profile } from '@/lib/types'
@@ -52,6 +53,14 @@ export default function MessagesPage() {
   return (
     <main className="messages-page">
       <header className="messages-header">
+        <Link
+          href="/feed"
+          className="messages-back"
+          aria-label="Return to Discover"
+          title="Return to Discover"
+        >
+          <span aria-hidden="true">←</span>
+        </Link>
         <div><p>Connections</p><h1>Messages</h1><span>Conversations begin after a request is accepted.</span></div>
       </header>
 

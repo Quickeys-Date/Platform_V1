@@ -1,7 +1,7 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const supabase = await createClient()
   const admin = createAdminClient()
 
@@ -14,6 +14,15 @@ export async function GET() {
   const now = new Date()
   const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 3600000).toISOString()
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString()
+  const requestedMonth = req.nextUrl.searchParams.get('month')
+  const validMonth = requestedMonth && /^\d{4}-(0[1-9]|1[0-2])$/.test(requestedMonth)
+    ? requestedMonth
+    : `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+  const [selectedYear, selectedMonthNumber] = validMonth.split('-').map(Number)
+  const monthStartDate = new Date(Date.UTC(selectedYear, selectedMonthNumber - 1, 1))
+  const monthEndDate = new Date(Date.UTC(selectedYear, selectedMonthNumber, 1))
+  const monthStart = monthStartDate.toISOString()
+  const monthEnd = monthEndDate.toISOString()
 
   const [
     { count: totalUsers },
@@ -32,6 +41,15 @@ export async function GET() {
     { data: paxMoreThanOnce },
     { data: closedConvTimings },
     { data: screenViews },
+    { data: users },
+    { data: periodSignupRows },
+    { count: periodConversations },
+    { count: periodPax },
+    { count: periodReports },
+    { data: allSignupDates },
+    { data: allConversationDates },
+    { data: allPaxDates },
+    { data: allReportDates },
   ] = await Promise.all([
     admin.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'USER'),
     admin.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'USER').gte('created_at', sevenDaysAgo),
@@ -45,10 +63,19 @@ export async function GET() {
     admin.from('pax_triggers').select('state_id_selected, feedback_response').not('feedback_response', 'is', null),
     admin.from('profiles').select('email, created_at').eq('role', 'USER').order('created_at', { ascending: false }).limit(10),
     admin.from('reports').select('*, reporter:profiles!reports_reporter_id_fkey(email), reported:profiles!reports_reported_id_fkey(email, first_name)').eq('status', 'PENDING').order('created_at', { ascending: false }).limit(20),
-    admin.from('pax_triggers').select('state_id_selected, feedback_open_text, created_at').not('feedback_open_text', 'is', null).order('created_at', { ascending: false }).limit(50),
+    admin.from('pax_triggers').select('id, state_id_selected, feedback_open_text, feedback_status, feedback_addressed_at, feedback_addressed_by, created_at').not('feedback_open_text', 'is', null).order('created_at', { ascending: false }),
     admin.from('pax_triggers').select('user_id').not('state_id_selected', 'is', null),
     admin.from('conversations').select('created_at, archived_at').eq('status', 'archived').not('archived_at', 'is', null).limit(500),
     admin.from('usage_events').select('screen, user_id').eq('event_type', 'SCREEN_VIEW'),
+    admin.from('profiles').select('*').eq('role', 'USER').order('created_at', { ascending: false }),
+    admin.from('profiles').select('created_at').eq('role', 'USER').gte('created_at', monthStart).lt('created_at', monthEnd),
+    admin.from('conversations').select('*', { count: 'exact', head: true }).gte('created_at', monthStart).lt('created_at', monthEnd),
+    admin.from('pax_triggers').select('*', { count: 'exact', head: true }).gte('created_at', monthStart).lt('created_at', monthEnd),
+    admin.from('reports').select('*', { count: 'exact', head: true }).gte('created_at', monthStart).lt('created_at', monthEnd),
+    admin.from('profiles').select('created_at').eq('role', 'USER').order('created_at', { ascending: true }),
+    admin.from('conversations').select('created_at').order('created_at', { ascending: true }),
+    admin.from('pax_triggers').select('created_at').order('created_at', { ascending: true }),
+    admin.from('reports').select('created_at').order('created_at', { ascending: true }),
   ])
 
   const emotionTally: Record<string, number> = {}
@@ -97,12 +124,53 @@ export async function GET() {
     { screen: 'pax/thankyou', label: 'Thank You', count: screenUserCounts['pax/thankyou']?.size || 0 },
   ]
 
-  const signupTrend = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(now.getTime() - (6 - i) * 24 * 3600000)
+  const daysInMonth = new Date(Date.UTC(selectedYear, selectedMonthNumber, 0)).getUTCDate()
+  const signupTrend = Array.from({ length: daysInMonth }, (_, i) => {
+    const d = new Date(Date.UTC(selectedYear, selectedMonthNumber - 1, i + 1))
     const dateStr = d.toISOString().split('T')[0]
-    const count = (recentSignups || []).filter((u: any) => u.created_at?.startsWith(dateStr)).length
-    return { date: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), count }
+    const count = (periodSignupRows || []).filter((u: any) => u.created_at?.startsWith(dateStr)).length
+    return { date: d.toLocaleDateString('en-US', { timeZone: 'UTC', month: 'short', day: 'numeric' }), count }
   })
+
+  const monthKey = (value: string) => value?.slice(0, 7)
+  const countByMonth = (rows: any[] | null) => (rows || []).reduce((counts: Record<string, number>, row: any) => {
+    const key = monthKey(row.created_at)
+    if (key) counts[key] = (counts[key] || 0) + 1
+    return counts
+  }, {})
+  const signupMonths = countByMonth(allSignupDates)
+  const conversationMonths = countByMonth(allConversationDates)
+  const paxMonths = countByMonth(allPaxDates)
+  const reportMonths = countByMonth(allReportDates)
+  const datedRows = [
+    ...(allSignupDates || []),
+    ...(allConversationDates || []),
+    ...(allPaxDates || []),
+    ...(allReportDates || []),
+  ].filter((row: any) => row.created_at)
+  const earliestDate = datedRows.length
+    ? new Date(Math.min(...datedRows.map((row: any) => new Date(row.created_at).getTime())))
+    : now
+  const cursor = new Date(Date.UTC(earliestDate.getUTCFullYear(), earliestDate.getUTCMonth(), 1))
+  const finalMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1))
+  const monthlyHistory = []
+  while (cursor <= finalMonth) {
+    const key = `${cursor.getUTCFullYear()}-${String(cursor.getUTCMonth() + 1).padStart(2, '0')}`
+    monthlyHistory.push({
+      month: key,
+      label: cursor.toLocaleDateString('en-US', { timeZone: 'UTC', month: 'short', year: 'numeric' }),
+      signups: signupMonths[key] || 0,
+      conversations: conversationMonths[key] || 0,
+      pax: paxMonths[key] || 0,
+      reports: reportMonths[key] || 0,
+    })
+    cursor.setUTCMonth(cursor.getUTCMonth() + 1)
+  }
+
+  const feedbackItems = (openFeedback || []).map((item: any) => ({
+    ...item,
+    feedback_status: item.feedback_status || 'OPEN',
+  }))
 
   return NextResponse.json({
     totalUsers: totalUsers || 0, newSignups: newSignups || 0, activeUsers: activeUsers || 0,
@@ -110,7 +178,16 @@ export async function GET() {
     paxToday: paxToday || 0, closeConvToday: closeConvToday || 0, inactivityToday: inactivityToday || 0,
     emotionBreakdown: emotionTally, feedbackYes, feedbackNo, feedbackByState, mostNotQuite,
     multipleTriggersCount, signupTrend, recentSignups: (recentSignups || []).slice(0, 5),
-    reportQueue: reportQueue || [], openFeedback: openFeedback || [],
-    avgTimeToCloseHours, dropOffData,
+    reportQueue: reportQueue || [], openFeedback: feedbackItems,
+    openFeedbackCount: feedbackItems.filter((item: any) => item.feedback_status === 'OPEN').length,
+    addressedFeedbackCount: feedbackItems.filter((item: any) => item.feedback_status === 'ADDRESSED').length,
+    avgTimeToCloseHours, dropOffData, users: users || [],
+    selectedMonth: validMonth,
+    monthLabel: monthStartDate.toLocaleDateString('en-US', { timeZone: 'UTC', month: 'long', year: 'numeric' }),
+    periodSignups: periodSignupRows?.length || 0,
+    periodConversations: periodConversations || 0,
+    periodPax: periodPax || 0,
+    periodReports: periodReports || 0,
+    monthlyHistory,
   })
 }

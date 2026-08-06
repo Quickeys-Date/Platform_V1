@@ -169,7 +169,7 @@ export default function MyProfilePage() {
   )
 
   return (
-    <div className="flex flex-col min-h-svh" style={{ background: '#0A0A0A' }}>
+    <div className="profile-page-shell" style={{ background: '#0A0A0A' }}>
       {/* Header */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px',
@@ -189,7 +189,7 @@ export default function MyProfilePage() {
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto pb-24">
+      <div className="profile-page-scroll">
         {/* Identity */}
         <div style={{ ...S.section, display: 'flex', alignItems: 'center', gap: 14 }}>
           {photoUrls[0] ? (

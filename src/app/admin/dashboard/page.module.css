@@ -56,6 +56,35 @@
 .content :global(.shadow-sm),.content :global(.shadow-md) { box-shadow:0 16px 40px rgba(0,0,0,.24)!important; }
 .content :global(.focus\:ring-amber-400:focus) { --tw-ring-color:rgba(15,183,191,.5)!important; }
 
+.dashboardHeading { display:flex; align-items:flex-end; justify-content:space-between; gap:18px; }
+.monthPicker { display:grid; gap:5px; min-width:190px; color:rgba(255,255,255,.48); font-size:9px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; }
+.monthPicker input { width:100%; min-height:40px; padding:7px 11px; border:1px solid rgba(217,155,52,.28); border-radius:10px; color:#f7f3e9; background:#031719; color-scheme:dark; font:600 12px inherit; cursor:pointer; }
+.monthPicker input:focus { outline:2px solid rgba(15,183,191,.38); outline-offset:2px; }
+.chartScroller { width:100%; overflow-x:auto; padding-bottom:6px; scrollbar-color:rgba(217,155,52,.45) rgba(255,255,255,.04); scrollbar-width:thin; }
+.monthHistory { display:grid; grid-auto-flow:column; grid-auto-columns:minmax(118px,1fr); gap:9px; overflow-x:auto; padding:3px 1px 10px; scrollbar-color:rgba(217,155,52,.45) rgba(255,255,255,.04); scrollbar-width:thin; }
+.monthCell { min-height:88px; padding:10px; display:grid; grid-template-columns:16px 1fr; grid-template-rows:auto auto; column-gap:9px; align-items:center; border:1px solid rgba(217,155,52,.17); border-radius:11px; color:rgba(255,255,255,.7); background:rgba(255,255,255,.018); text-align:left; cursor:pointer; }
+.monthCell:hover,.monthCellActive { border-color:rgba(255,199,102,.7); background:rgba(217,155,52,.08); }
+.monthCellActive { box-shadow:inset 0 0 0 1px rgba(255,199,102,.3); }
+.monthActivity { grid-row:1/3; width:16px; height:52px; border-radius:5px; background:rgba(255,255,255,.055); }
+.monthLevel1 { background:rgba(15,183,191,.25); }
+.monthLevel2 { background:rgba(15,183,191,.45); }
+.monthLevel3 { background:rgba(15,183,191,.68); }
+.monthLevel4 { background:linear-gradient(180deg,var(--admin-teal-light),var(--admin-teal)); box-shadow:0 0 15px rgba(15,183,191,.28); }
+.monthCell strong { align-self:end; color:#f7f3e9; font-size:11px; }
+.monthCell small { align-self:start; color:rgba(255,255,255,.38); font-size:9px; }
+.feedbackHeading { display:flex; align-items:flex-end; justify-content:space-between; gap:18px; }
+.feedbackFilters { display:flex; gap:4px; padding:4px; border:1px solid rgba(217,155,52,.18); border-radius:999px; background:rgba(255,255,255,.025); }
+.feedbackFilters button { min-height:32px; padding:6px 12px; border:0; border-radius:999px; color:rgba(255,255,255,.48); background:transparent; font-size:10px; font-weight:800; cursor:pointer; }
+.feedbackFilters button:hover,.feedbackFilters .feedbackFilterActive { color:#071315; background:linear-gradient(135deg,var(--admin-gold),var(--admin-gold-deep)); }
+.openBadge,.addressedBadge { padding:3px 7px; border-radius:999px; font-size:9px; font-weight:900; letter-spacing:.06em; text-transform:uppercase; }
+.openBadge { color:var(--admin-gold); background:rgba(217,155,52,.1); }
+.addressedBadge { color:#55e1c8; background:rgba(15,183,191,.1); }
+.feedbackAddressed { opacity:.72; }
+.feedbackFooter { margin-top:14px; padding-top:12px; display:flex; align-items:center; justify-content:space-between; gap:12px; border-top:1px solid rgba(217,155,52,.12); color:rgba(255,255,255,.38); font-size:10px; }
+.feedbackFooter button { min-height:34px; padding:7px 12px; border:1px solid rgba(255,199,102,.28); border-radius:9px; color:var(--admin-gold); background:rgba(217,155,52,.06); font-size:10px; font-weight:800; cursor:pointer; }
+.feedbackFooter button:hover { border-color:var(--admin-gold); background:rgba(217,155,52,.12); }
+.feedbackFooter button:disabled { opacity:.45; cursor:wait; }
+
 @media(max-width:900px){.sidebar{width:76px;padding-inline:10px}.navLabel,.navText,.navCount{display:none}.navButton{justify-content:center;padding:0}.navIcon{width:auto}.topbarBrand small{display:none}}
-@media(max-width:640px){.topbar{min-height:62px;padding-inline:12px}.websiteLink,.topbarSignout{padding:8px 10px}.topbarBrand span{font-size:18px}.shell{display:block!important}.sidebar{position:fixed;right:0;bottom:0;left:0;z-index:70;width:100%;height:70px;padding:8px 8px max(8px,env(safe-area-inset-bottom));flex-direction:row;border-top:1px solid rgba(217,155,52,.2);border-right:0}.sidebar .navButton{min-height:48px}.navLabel,.navSpacer,.sidebarSignout{display:none}.content{height:calc(100svh - 62px);padding:18px 12px 92px}.content :global(.grid-cols-2){grid-template-columns:1fr!important}}
+@media(max-width:640px){.topbar{min-height:62px;padding-inline:12px}.websiteLink,.topbarSignout{padding:8px 10px}.topbarBrand span{font-size:18px}.shell{display:block!important}.sidebar{position:fixed;right:0;bottom:0;left:0;z-index:70;width:100%;height:70px;padding:8px 8px max(8px,env(safe-area-inset-bottom));flex-direction:row;border-top:1px solid rgba(217,155,52,.2);border-right:0}.sidebar .navButton{min-height:48px}.navLabel,.navSpacer,.sidebarSignout{display:none}.content{height:calc(100svh - 62px);padding:18px 12px 92px}.content :global(.grid-cols-2){grid-template-columns:1fr!important}.dashboardHeading,.feedbackHeading{align-items:stretch;flex-direction:column}.monthPicker{min-width:0;width:100%}.feedbackFilters{width:100%;overflow-x:auto}.feedbackFilters button{flex:1;white-space:nowrap}.feedbackFooter{align-items:flex-start;flex-direction:column}.feedbackFooter button{width:100%}}
 @media(prefers-reduced-motion:reduce){.navButton{transition:none}}

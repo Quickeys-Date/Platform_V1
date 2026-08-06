@@ -125,6 +125,9 @@ CREATE TABLE IF NOT EXISTS pax_triggers (
   state_id_selected TEXT CHECK (state_id_selected IN ('PAX_GOOD','PAX_NEUTRAL','PAX_NOT_GREAT','PAX_CONFUSED','PAX_DISAPPOINTED')),
   feedback_response TEXT CHECK (feedback_response IN ('FEEDBACK_YES', 'FEEDBACK_NOT_QUITE')),
   feedback_open_text TEXT CHECK (char_length(feedback_open_text) <= 300),
+  feedback_status TEXT NOT NULL DEFAULT 'OPEN' CHECK (feedback_status IN ('OPEN', 'ADDRESSED')),
+  feedback_addressed_at TIMESTAMPTZ,
+  feedback_addressed_by UUID REFERENCES profiles(id) ON DELETE SET NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -154,7 +157,7 @@ CREATE INDEX idx_reports_status ON reports(status);
 CREATE TABLE IF NOT EXISTS admin_actions (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   admin_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
-  action TEXT NOT NULL CHECK (action IN ('APPROVE', 'REJECT', 'SUSPEND', 'RESTORE', 'DEACTIVATE', 'REMOVE_PHOTO', 'EXPORT_DATA', 'DISMISS_REPORT', 'REVIEW_REPORT')),
+  action TEXT NOT NULL CHECK (action IN ('APPROVE', 'REJECT', 'SUSPEND', 'RESTORE', 'DEACTIVATE', 'REMOVE_PHOTO', 'EXPORT_DATA', 'DISMISS_REPORT', 'REVIEW_REPORT', 'ADDRESS_FEEDBACK', 'REOPEN_FEEDBACK')),
   target_user_id UUID REFERENCES profiles(id),
   target_report_id UUID REFERENCES reports(id),
   notes TEXT,

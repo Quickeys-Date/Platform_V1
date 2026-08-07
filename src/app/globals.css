@@ -5140,10 +5140,11 @@ body {
 .quikey-call-stage { position: relative; width: 100%; height: 100%; min-height: 0; }
 .quikey-call-main-video { position: absolute; inset: 0; overflow: hidden; background: #020607; }
 .quikey-call-main-video > .str-video__participant-view { width: 100%; height: 100%; }
-.quikey-call-main-video video { width: 100%; height: 100%; object-fit: cover; }
+.quikey-call-main-video video { width: 100%; height: 100%; object-fit: contain; background: #020607; }
+.quikey-call-participant-name { position: absolute; z-index: 2; left: 18px; bottom: 18px; padding: 6px 11px; border-radius: 999px; background: rgba(0,0,0,.64); color: #fff; font-size: 13px; font-weight: 750; }
 .quikey-call-self-video { position: absolute; z-index: 3; top: 20px; right: 20px; width: clamp(150px, 20vw, 260px); aspect-ratio: 4 / 3; overflow: hidden; border: 2px solid rgba(255,209,120,.75); border-radius: 18px; background: #061719; box-shadow: 0 14px 40px rgba(0,0,0,.5); }
 .quikey-call-self-video > .str-video__participant-view,
-.quikey-call-self-video video { width: 100%; height: 100%; object-fit: cover; }
+.quikey-call-self-video video { width: 100%; height: 100%; object-fit: contain; background: #020607; }
 .quikey-call-self-video > span { position: absolute; left: 10px; bottom: 8px; padding: 3px 8px; border-radius: 999px; background: rgba(0,0,0,.62); color: #fff; font-size: 11px; font-weight: 700; }
 .quikey-call-joining { width: 100%; height: 100%; display: grid; place-content: center; justify-items: center; gap: 14px; color: rgba(255,255,255,.72); font-weight: 700; }
 .quikey-call-joining span { width: 42px; height: 42px; border: 3px solid rgba(255,255,255,.18); border-top-color: var(--gold-bright); border-radius: 50%; animation: quikey-call-spin .8s linear infinite; }
@@ -5155,6 +5156,10 @@ body {
 .quikey-call-media-controls button > span { display: block; font-size: 10px; line-height: 1; }
 .quikey-call-media-controls .quikey-call-hangup { background: #df4540 !important; border-color: #df4540 !important; }
 .quikey-call-media-controls .quikey-call-hangup svg { width: 27px; height: 27px; }
+.quikey-call-minute-notice { position: absolute; z-index: 8; top: 18px; left: 50%; transform: translateX(-50%); min-width: min(310px, calc(100% - 32px)); padding: 11px 18px; display: flex; align-items: center; justify-content: center; gap: 9px; border: 1px solid rgba(255,209,120,.78); border-radius: 999px; background: rgba(6,35,38,.96); color: #fff; box-shadow: 0 12px 34px rgba(0,0,0,.45); text-align: center; animation: quikey-minute-notice-in .25s ease-out; }
+.quikey-call-minute-notice strong { color: var(--gold-bright); }
+.quikey-call-minute-notice span { color: rgba(255,255,255,.78); font-size: 12px; }
+@keyframes quikey-minute-notice-in { from { opacity: 0; transform: translate(-50%, -8px); } }
 @keyframes quikey-call-spin { to { transform: rotate(360deg); } }
 
 /* Familiar, high-contrast in-call controls inspired by common calling apps. */
@@ -5211,6 +5216,10 @@ body {
 @media (max-width: 480px) { .incoming-call-overlay { align-items: end; padding: 12px 12px max(12px, env(safe-area-inset-bottom)); } .incoming-call-card { border-radius: 24px; } .incoming-call-actions { flex-direction: column-reverse; } .incoming-call-actions button { width: 100%; } }
 @media (max-width: 600px) { .quikey-call-overlay { padding: 0; } .quikey-call-card-active { width: 100%; height: 100dvh; border: 0; border-radius: 0; } .quikey-call-actions { flex-direction: column-reverse; } .quikey-call-actions button { width: 100%; } .quikey-call-topbar { min-height: 72px; padding: max(10px, env(safe-area-inset-top)) 12px 10px; } .quikey-call-topbar > div:first-child { min-width: 0; flex-direction: column; align-items: flex-start; gap: 1px; } .quikey-call-with { max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .quikey-call-topbar-actions { gap: 7px !important; } .quikey-call-header-timer { min-width: 54px; padding: 6px 8px; font-size: 14px; } .quikey-call-topbar button { min-height: 40px; padding: 7px 12px; } .quikey-call-self-video { top: 12px; right: 12px; width: 30vw; min-width: 105px; max-width: 145px; border-radius: 14px; } .quikey-call-media-controls { bottom: max(14px, env(safe-area-inset-bottom)); width: calc(100% - 24px); max-width: 330px; justify-content: center; padding: 9px; } .quikey-call-media-controls button { width: 86px; min-height: 62px; } }
 @media (max-width: 520px) { .chat-video-button { min-width: 44px; width: 44px; height: 44px; } .chat-video-icon { width: 25px; height: 25px; } }
+@media (max-width: 600px) {
+  .quikey-call-participant-name { left: 12px; bottom: 92px; }
+  .quikey-call-minute-notice { top: 10px; flex-direction: column; gap: 1px; border-radius: 18px; }
+}
 
 .chat-options {
   display: flex;

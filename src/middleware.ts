@@ -64,7 +64,12 @@ export async function middleware(request: NextRequest) {
   ]
 
   if (publicRoutes.includes(pathname)) {
-    if (user && pathname === '/') {
+    // The public URL always remains the landing page unless the member
+    // explicitly selected "Remember me" when signing in. Supabase may still
+    // have a valid session cookie, but that alone must not skip the landing
+    // experience on a new visit.
+    const remembered = request.cookies.get('quikeys-remember-me')?.value === '1'
+    if (user && pathname === '/' && remembered) {
       return NextResponse.redirect(new URL('/feed', request.url))
     }
     return supabaseResponse

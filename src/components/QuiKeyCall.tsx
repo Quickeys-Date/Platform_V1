@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { apiFetch } from '@/lib/api'
+import { useCallTone } from '@/hooks/useCallTone'
 import toast from 'react-hot-toast'
 import {
   ParticipantView,
@@ -228,6 +229,7 @@ export function QuiKeyCall({ conversationId, userId, otherName }: { conversation
   const incoming = call?.status === 'pending' && call.initiated_by !== userId
   const waiting = call?.status === 'pending' && call.initiated_by === userId
   const active = call?.status === 'active' && call.call_id && call.api_key && call.token && userId
+  useCallTone(incoming ? 'incoming' : waiting ? 'outgoing' : null)
 
   // Calls are an optional enhancement. If their migration or provider is not
   // configured, omit the control instead of letting it block normal chat.

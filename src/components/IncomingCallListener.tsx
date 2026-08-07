@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { apiFetch } from '@/lib/api'
+import { useCallTone } from '@/hooks/useCallTone'
 
 type IncomingCall = {
   id: string
@@ -18,6 +19,7 @@ export function IncomingCallListener() {
   const pathname = usePathname()
   const [call, setCall] = useState<IncomingCall | null>(null)
   const [busy, setBusy] = useState(false)
+  useCallTone(call ? 'incoming' : null)
 
   // Chat has its own listener because it also mounts the Stream video room.
   const shouldListen = pathname !== '/' &&

@@ -24,6 +24,25 @@ export async function GET(req: NextRequest) {
   const monthStart = monthStartDate.toISOString()
   const monthEnd = monthEndDate.toISOString()
 
+  // Never present a failed database request as a real zero. That made
+  // existing users and history appear to have been deleted when the service
+  // key was stale or misconfigured.
+  const { error: adminAccessError } = await admin.from('profiles').select('id', { count: 'exact', head: true })
+  if (adminAccessError) {
+    console.error('Admin analytics database access failed:', adminAccessError.message)
+    return NextResponse.json({
+      error: 'Admin analytics cannot access Supabase. Update SUPABASE_SERVICE_ROLE_KEY with the current service_role secret.',
+    }, { status: 503 })
+  }
+
+  const { error: feedbackSchemaError } = await admin.from('pax_triggers').select('feedback_status').limit(1)
+  if (feedbackSchemaError) {
+    console.error('Admin feedback schema is not ready:', feedbackSchemaError.message)
+    return NextResponse.json({
+      error: 'Feedback history is not installed. Run supabase/migrations/20260806_admin_feedback_history.sql.',
+    }, { status: 503 })
+  }
+
   const [
     { count: totalUsers },
     { count: newSignups },

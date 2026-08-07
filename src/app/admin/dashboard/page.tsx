@@ -33,28 +33,34 @@ export default function AdminDashboardPage() {
   })
 
   useEffect(() => {
+    const controller = new AbortController()
     const loadAdmin = async () => {
       setLoading(true)
       setLoadError('')
       try {
-        const response = await fetch(`/api/admin/stats?month=${encodeURIComponent(selectedMonth)}`, { cache: 'no-store' })
+        const response = await fetch(`/api/admin/stats?month=${encodeURIComponent(selectedMonth)}`, { cache: 'no-store', signal: controller.signal })
         if (response.status === 401 || response.status === 403) {
           router.replace('/admin/login')
           return
         }
-        if (!response.ok) throw new Error('Unable to load dashboard')
+        if (!response.ok) {
+          const failed = await response.json().catch(() => ({}))
+          throw new Error(failed.error || 'Unable to load dashboard')
+        }
 
         const data = await response.json()
         setStats(data)
         setUsers(data.users || [])
-      } catch {
-        setLoadError('The admin dashboard could not be loaded.')
+      } catch (error) {
+        if (controller.signal.aborted) return
+        setLoadError(error instanceof Error ? error.message : 'The admin dashboard could not be loaded.')
       } finally {
         setLoading(false)
       }
     }
 
     loadAdmin()
+    return () => controller.abort()
   }, [router, selectedMonth])
 
   const modUser = async (userId: string, action: string, reason?: string) => {

@@ -24,7 +24,13 @@ export async function PATCH(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const admin = createAdminClient()
   const { trigger_id, feedback_response, feedback_open_text } = await req.json()
-  const { data, error } = await admin.from('pax_triggers').update({ feedback_response: feedback_response || null, feedback_open_text: feedback_open_text?.trim().slice(0, 300) || null }).eq('id', trigger_id).eq('user_id', user.id).select().single()
+  const normalizedText = feedback_open_text?.trim().slice(0, 300) || null
+  const { data, error } = await admin.from('pax_triggers').update({
+    feedback_response: feedback_response || null,
+    feedback_open_text: normalizedText,
+    // New or revised written feedback always returns to the developer queue.
+    ...(normalizedText ? { feedback_status: 'OPEN', feedback_addressed_at: null, feedback_addressed_by: null } : {}),
+  }).eq('id', trigger_id).eq('user_id', user.id).select().single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ trigger: data })
 }

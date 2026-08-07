@@ -32,11 +32,35 @@ export default function MyProfilePage() {
   const [saving, setSaving] = useState(false)
   const [showSignOut, setShowSignOut] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [mediaStatus, setMediaStatus] = useState<'unknown' | 'checking' | 'ready' | 'blocked'>('unknown')
   const [photoUrls, setPhotoUrls] = useState<string[]>([])
   const [form, setForm] = useState({
     bio: '', connection_prompt: '', age_range_min: 18, age_range_max: 45,
     location_radius: '25mi', interested_in: [] as string[],
   })
+
+  const checkCallDevices = async () => {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setMediaStatus('blocked')
+      toast.error('Camera and microphone are not available in this browser.')
+      return
+    }
+    setMediaStatus('checking')
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true })
+      stream.getTracks().forEach(track => track.stop())
+      window.localStorage.setItem('quikey-call-media-ready', 'true')
+      setMediaStatus('ready')
+      toast.success('Camera and microphone are ready for QuiKey calls.')
+    } catch {
+      setMediaStatus('blocked')
+      toast.error('Allow camera and microphone in your browser site settings, then try again.')
+    }
+  }
+
+  useEffect(() => {
+    if (window.localStorage.getItem('quikey-call-media-ready') === 'true') setMediaStatus('ready')
+  }, [])
 
   const loadProfile = async () => {
     setLoading(true)
@@ -317,6 +341,26 @@ export default function MyProfilePage() {
             <div style={S.value}>{profile.location_radius}</div>
           )}
         </div>
+
+        {!editing && (
+          <div style={S.section}>
+            <div style={S.label}>Call settings</div>
+            <button onClick={checkCallDevices} disabled={mediaStatus === 'checking'} style={{
+              width: '100%', display: 'flex', alignItems: 'center', gap: 12,
+              padding: '14px 0', borderBottom: '1px solid rgba(255,255,255,0.05)',
+              background: 'transparent', cursor: 'pointer', textAlign: 'left',
+            }}>
+              <span aria-hidden="true" style={{ color: mediaStatus === 'ready' ? '#0FB7BF' : '#FFC766' }}>◉</span>
+              <span style={{ flex: 1 }}>
+                <span style={{ display: 'block', fontSize: 14, color: 'rgba(255,255,255,0.75)' }}>Camera &amp; microphone</span>
+                <span style={{ display: 'block', marginTop: 3, fontSize: 12, color: 'rgba(255,255,255,0.38)' }}>
+                  {mediaStatus === 'ready' ? 'Ready for QuiKey calls' : mediaStatus === 'checking' ? 'Checking devices…' : mediaStatus === 'blocked' ? 'Permission needs attention' : 'Check or update call access'}
+                </span>
+              </span>
+              <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: 14 }}>→</span>
+            </button>
+          </div>
+        )}
 
         {!editing && (
           <div style={S.section}>

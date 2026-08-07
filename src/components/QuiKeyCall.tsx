@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { apiFetch } from '@/lib/api'
+import { useCallTone } from '@/hooks/useCallTone'
 import toast from 'react-hot-toast'
 import {
   ParticipantView,
@@ -26,7 +27,14 @@ function QuiKeyCallStage({ userId, otherName, onEnd }: { userId: string; otherNa
 
   return <div className="quikey-call-stage">
     <div className="quikey-call-main-video">
-      {mainParticipant && <ParticipantView participant={mainParticipant} ParticipantViewUI={null} />}
+      {mainParticipant && <ParticipantView
+        participant={mainParticipant}
+        ParticipantViewUI={null}
+        // Before the other member finishes joining, the main tile falls back
+        // to the local participant. Never play that local microphone through
+        // the phone speaker or it creates immediate acoustic echo.
+        muteAudio={!remoteParticipant}
+      />}
       {mainParticipant && <span className="quikey-call-participant-name">{remoteParticipant ? otherName : 'You'}</span>}
     </div>
     {remoteParticipant && localParticipant && <div className="quikey-call-self-video" aria-label="Your camera preview">
@@ -228,6 +236,7 @@ export function QuiKeyCall({ conversationId, userId, otherName }: { conversation
   const incoming = call?.status === 'pending' && call.initiated_by !== userId
   const waiting = call?.status === 'pending' && call.initiated_by === userId
   const active = call?.status === 'active' && call.call_id && call.api_key && call.token && userId
+  useCallTone(incoming ? 'incoming' : waiting ? 'outgoing' : null)
 
   // Calls are an optional enhancement. If their migration or provider is not
   // configured, omit the control instead of letting it block normal chat.

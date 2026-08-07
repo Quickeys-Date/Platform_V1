@@ -7,8 +7,11 @@ export const metadata: Metadata = {
   title: 'QuiKeys™ — A dating app that goes beyond dating',
   description: 'A guided dating experience that helps you navigate what happens after the conversation, not just during it.',
   icons: {
-    icon: '/quikeys-logo.png',
-    apple: '/quikeys-logo.png',
+    // Use the square, tightly cropped brand mark for browser tabs. The full
+    // 3:2 logo becomes too small and looks washed out at 16–32px favicon size.
+    icon: [{ url: '/quickeys-icon.png?v=2', type: 'image/png', sizes: '695x695' }],
+    shortcut: '/quickeys-icon.png?v=2',
+    apple: '/quickeys-icon.png?v=2',
   },
 }
 

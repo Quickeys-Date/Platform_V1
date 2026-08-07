@@ -48,6 +48,13 @@ export default function SignInPage() {
         return
       }
 
+      // This preference is deliberately separate from the Supabase auth
+      // cookie. It controls whether opening the public QuiKeys URL later
+      // should resume at Discover or show the landing page first.
+      document.cookie = form.remember
+        ? `quikeys-remember-me=1; Path=/; Max-Age=${60 * 60 * 24 * 30}; SameSite=Lax${window.location.protocol === 'https:' ? '; Secure' : ''}`
+        : 'quikeys-remember-me=; Path=/; Max-Age=0; SameSite=Lax'
+
       const { data: profile } = await supabase
         .from('profiles')
         .select('status, age_confirmed_at, profile_complete, pax_onboarded, role')

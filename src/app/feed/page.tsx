@@ -10,8 +10,6 @@ import { apiFetch } from '@/lib/api'
 
 const FEED_CACHE_KEY = 'quikeys-feed-cache-v1'
 const FEED_CACHE_TTL = 5 * 60 * 1000
-const PAX_PROMPT_SESSION_KEY = 'quikeys-pax-prompted-trigger-ids'
-
 type FeedCache = {
   profiles: Profile[]
   viewer: { first_name: string; photos: string[] } | null
@@ -20,7 +18,6 @@ type FeedCache = {
 }
 
 export default function FeedPage() {
-  const [redirecting, setRedirecting] = useState(false)
   const [profiles, setProfiles] = useState<Profile[]>([])
   const [feedLoading, setFeedLoading] = useState(true)
   const [feedError, setFeedError] = useState('')
@@ -46,27 +43,6 @@ export default function FeedPage() {
 
   useEffect(() => () => {
     if (requestMessageTimer.current) clearTimeout(requestMessageTimer.current)
-  }, [])
-
-  useEffect(() => {
-    const checkInactivity = async () => {
-      try {
-        const response = await apiFetch('/api/pax')
-        const data = await response.json()
-        const pending = data.triggers || []
-        if (pending.length) {
-          const ids = pending.map((trigger: { id: string }) => trigger.id).join(',')
-          // An unfinished Pax check-in must not trap someone in a redirect
-          // loop. Prompt once per browser session; Back/Return then stays on
-          // Connections while the underlying trigger remains available.
-          if (sessionStorage.getItem(PAX_PROMPT_SESSION_KEY) === ids) return
-          sessionStorage.setItem(PAX_PROMPT_SESSION_KEY, ids)
-          setRedirecting(true)
-          window.location.href = `/pax/checkin?triggers=${encodeURIComponent(ids)}&index=0&type=INACTIVITY`
-        }
-      } catch { /* The feed remains usable if the optional Pax check fails. */ }
-    }
-    checkInactivity()
   }, [])
 
   const loadFeed = useCallback(async ({ background = false, preserveProfileId = '' }: { background?: boolean; preserveProfileId?: string } = {}) => {
@@ -102,7 +78,6 @@ export default function FeedPage() {
   }, [])
 
   useEffect(() => {
-    if (redirecting) return
     let restored = false
     let preservedProfileId = ''
     try {
@@ -122,7 +97,7 @@ export default function FeedPage() {
       sessionStorage.removeItem(FEED_CACHE_KEY)
     }
     loadFeed({ background: restored, preserveProfileId: preservedProfileId })
-  }, [redirecting, loadFeed])
+  }, [loadFeed])
 
   useEffect(() => {
     if (feedLoading || !profiles.length) return
@@ -167,7 +142,6 @@ export default function FeedPage() {
     setCurrentIndex(index => index + 1)
   }
 
-  if (redirecting) return <div className="feed-loading-page"><div className="feed-loading-spinner" /></div>
   const currentProfile = profiles[currentIndex]
 
   return (

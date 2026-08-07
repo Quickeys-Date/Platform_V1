@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { apiFetch } from '@/lib/api'
 import toast from 'react-hot-toast'
@@ -15,7 +15,7 @@ import '@stream-io/video-react-sdk/dist/css/styles.css'
 
 type Call = { id: string; initiated_by: string; status: 'pending' | 'active'; call_id?: string; api_key?: string; token?: string; started_at?: string; ends_at?: string }
 
-function QuiKeyCallStage({ userId, onEnd }: { userId: string; onEnd: () => void }) {
+function QuiKeyCallStage({ userId, otherName, onEnd }: { userId: string; otherName: string; onEnd: () => void }) {
   const { useParticipants, useCameraState, useMicrophoneState } = useCallStateHooks()
   const participants = useParticipants()
   const { camera, isMute: cameraMuted } = useCameraState()
@@ -26,7 +26,8 @@ function QuiKeyCallStage({ userId, onEnd }: { userId: string; onEnd: () => void 
 
   return <div className="quikey-call-stage">
     <div className="quikey-call-main-video">
-      {mainParticipant && <ParticipantView participant={mainParticipant} />}
+      {mainParticipant && <ParticipantView participant={mainParticipant} ParticipantViewUI={null} />}
+      {mainParticipant && <span className="quikey-call-participant-name">{remoteParticipant ? otherName : 'You'}</span>}
     </div>
     {remoteParticipant && localParticipant && <div className="quikey-call-self-video" aria-label="Your camera preview">
       <ParticipantView participant={localParticipant} ParticipantViewUI={null} muteAudio />
@@ -54,6 +55,7 @@ function JoinedStreamCall({
   callId,
   token,
   userId,
+  otherName,
   onEnd,
   onError,
   onJoined,
@@ -62,6 +64,7 @@ function JoinedStreamCall({
   callId: string
   token: string
   userId: string
+  otherName: string
   onEnd: () => void
   onError: () => void
   onJoined: () => void
@@ -120,7 +123,7 @@ function JoinedStreamCall({
   return (
     <StreamVideo client={client}>
       <StreamCall call={streamCall}>
-        <QuiKeyCallStage userId={userId} onEnd={onEnd} />
+        <QuiKeyCallStage userId={userId} otherName={otherName} onEnd={onEnd} />
       </StreamCall>
     </StreamVideo>
   )
@@ -134,7 +137,6 @@ export function QuiKeyCall({ conversationId, userId, otherName }: { conversation
   const [confirmStart, setConfirmStart] = useState(false)
   const [readyToJoin, setReadyToJoin] = useState(false)
   const [checkingMedia, setCheckingMedia] = useState(false)
-  const minuteAlertShown = useRef(false)
   const connectionError = useCallback(() => {
     toast.error('The call could not connect. Check camera and microphone access.')
   }, [])
@@ -180,7 +182,6 @@ export function QuiKeyCall({ conversationId, userId, otherName }: { conversation
   }, [call?.id, call?.status, call?.ends_at])
 
   useEffect(() => {
-    minuteAlertShown.current = false
     setReadyToJoin(false)
   }, [call?.id])
 
@@ -197,16 +198,6 @@ export function QuiKeyCall({ conversationId, userId, otherName }: { conversation
       setCheckingMedia(false)
     }
   }
-
-  useEffect(() => {
-    if (call?.status !== 'active' || seconds > 60 || seconds <= 0 || minuteAlertShown.current) return
-    minuteAlertShown.current = true
-    toast('One minute remaining in your QuiKey call.', {
-      duration: 5000,
-      icon: '⏱',
-      style: { background: '#062326', color: '#ffd178', border: '1px solid rgba(217,155,52,.7)' },
-    })
-  }, [call?.status, seconds])
 
   const act = async (action: string) => {
     setBusy(true)
@@ -291,10 +282,15 @@ export function QuiKeyCall({ conversationId, userId, otherName }: { conversation
             </div>
           </div>
           <div className="quikey-call-video">
+            {call.ends_at && seconds <= 60 && seconds > 55 && <div className="quikey-call-minute-notice" role="status" aria-live="assertive">
+              <strong>One minute left</strong>
+              <span>Make this moment count.</span>
+            </div>}
             <JoinedStreamCall
               apiKey={call.api_key!}
               callId={call.call_id!}
               userId={userId!}
+              otherName={otherName}
               token={call.token!}
               onEnd={() => act('end')}
               onError={connectionError}

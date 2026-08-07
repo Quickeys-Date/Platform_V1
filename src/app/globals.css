@@ -5119,7 +5119,7 @@ body {
 .chat-video-icon { width: 27px; height: 27px; display: grid; place-items: center; }
 .chat-video-icon svg { width: 100%; height: 100%; overflow: visible; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
 .chat-video-icon .chat-video-heart { fill: rgba(217, 155, 52, .18); stroke-width: 1.45; }
-.quikey-call-overlay { position: fixed; z-index: 1000; inset: 0; display: grid; place-items: center; padding: 18px; background: rgba(0, 8, 9, .88); backdrop-filter: blur(10px); }
+.quikey-call-overlay { position: fixed; z-index: 2147483000; inset: 0; width: 100vw; height: 100dvh; display: grid; place-items: center; padding: 18px; background: rgba(0, 8, 9, .96); backdrop-filter: blur(10px); isolation: isolate; }
 .quikey-call-card { width: min(100%, 520px); padding: clamp(24px, 5vw, 42px); text-align: center; border: 1px solid rgba(217, 155, 52, .55); border-radius: 24px; background: linear-gradient(150deg, #062326, #020f10); box-shadow: 0 30px 90px rgba(0,0,0,.55); }
 .quikey-call-card h2 { margin: 8px 0 12px; color: var(--gold-bright); font-family: 'Playfair Display', Georgia, serif; font-size: clamp(24px, 4vw, 34px); }
 .quikey-call-card p { color: rgba(255,255,255,.62); line-height: 1.6; }
@@ -5127,17 +5127,19 @@ body {
 .quikey-call-card button { min-height: 44px; padding: 10px 20px; border: 1px solid rgba(217,155,52,.48); border-radius: 999px; background: transparent; color: var(--gold-bright); cursor: pointer; font-weight: 700; }
 .quikey-call-actions { margin-top: 24px; display: flex; justify-content: center; gap: 12px; }
 .quikey-call-card .quikey-call-primary { background: linear-gradient(135deg, #ffd178, #d99b34); color: #071315; }
-.quikey-call-card-active { width: min(100%, 1040px); height: min(92svh, 760px); padding: 0; overflow: hidden; display: grid; grid-template-rows: auto 1fr; }
+.quikey-call-card-active { width: 100%; height: 100%; max-width: none; padding: 0; overflow: hidden; display: grid; grid-template-rows: auto minmax(0, 1fr); border-radius: 0; }
 .quikey-call-topbar { padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; background: #061e20; }
 .quikey-call-topbar div { display: flex; align-items: center; gap: 12px; color: var(--gold-bright); }
 .quikey-call-topbar-actions { margin-left: auto; }
+.quikey-call-with { color: rgba(255,255,255,.48); font-size: 13px; font-weight: 500; }
 .quikey-call-header-timer { min-width: 58px; padding: 7px 10px; border: 1px solid rgba(15,183,191,.28); border-radius: 999px; background: rgba(15,183,191,.12); color: #7af2f5; font-size: 15px; font-weight: 800; text-align: center; font-variant-numeric: tabular-nums; transition: color .2s ease, border-color .2s ease, background .2s ease, box-shadow .2s ease; }
 .quikey-call-header-timer-warning { border-color: rgba(255,209,120,.75); background: rgba(217,155,52,.16); color: #ffd178; box-shadow: 0 0 0 4px rgba(255,209,120,.08); }
 .quikey-call-video { position: relative; min-height: 0; overflow: hidden; background: #000; }
 .quikey-call-video, .quikey-call-video > div { width: 100%; height: 100%; }
 .quikey-call-video .str-video { width: 100%; height: 100%; }
 .quikey-call-stage { position: relative; width: 100%; height: 100%; min-height: 0; }
-.quikey-call-stage > .str-video__speaker-layout { height: 100%; }
+.quikey-call-stage > .str-video__paginated-grid-layout { height: 100%; padding: clamp(10px, 2vw, 24px); }
+.quikey-call-stage .str-video__participant-view { overflow: hidden; border: 1px solid rgba(217,155,52,.28); border-radius: 20px; background: #02090a; }
 .quikey-call-joining { width: 100%; height: 100%; display: grid; place-content: center; justify-items: center; gap: 14px; color: rgba(255,255,255,.72); font-weight: 700; }
 .quikey-call-joining span { width: 42px; height: 42px; border: 3px solid rgba(255,255,255,.18); border-top-color: var(--gold-bright); border-radius: 50%; animation: quikey-call-spin .8s linear infinite; }
 .quikey-call-media-controls { position: absolute; z-index: 4; left: 50%; bottom: 18px; transform: translateX(-50%); display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid rgba(122,242,245,.14); border-radius: 999px; background: rgba(2,20,21,.86); box-shadow: 0 12px 34px rgba(0,0,0,.42); backdrop-filter: blur(10px); }
@@ -5166,19 +5168,15 @@ body {
   background: #1b5a5d;
 }
 .quikey-call-video .str-video__call-controls__button .str-video__icon,
-.quikey-call-video .str-video__composite-button__button .str-video__icon {
-  width: 25px;
-  height: 25px;
-  background-color: #fff;
-}
+.quikey-call-video .str-video__composite-button__button .str-video__icon { width: 25px; height: 25px; }
 .quikey-call-video .str-video__call-controls__button--variant-active,
 .quikey-call-video .str-video__composite-button__button-group--active {
   background: #f2f2f2;
 }
-.quikey-call-video .str-video__call-controls__button--variant-active .str-video__icon,
-.quikey-call-video .str-video__composite-button__button-group--active .str-video__icon {
-  background-color: #17282a;
-}
+.quikey-call-preflight { text-align: center; }
+.quikey-call-preflight-icon { width: 68px; height: 68px; margin: 0 auto 18px; display: grid; place-items: center; border: 1px solid rgba(217,155,52,.6); border-radius: 50%; color: #ffd178; font-size: 30px; background: radial-gradient(circle, rgba(15,183,191,.22), rgba(3,25,27,.95)); box-shadow: 0 0 30px rgba(15,183,191,.14); }
+.quikey-call-permissions { margin: 20px auto 0; display: flex; justify-content: center; gap: 10px; }
+.quikey-call-permissions span { padding: 8px 13px; border: 1px solid rgba(15,183,191,.28); border-radius: 999px; color: #8ceff2; background: rgba(15,183,191,.07); font-size: 12px; font-weight: 700; }
 .quikey-call-video .str-video__call-controls__button--variant-danger {
   min-width: 58px;
   width: 58px;
@@ -5202,7 +5200,7 @@ body {
 .incoming-call-actions button:disabled { opacity: .55; cursor: wait; }
 @keyframes incoming-call-pulse { 50% { transform: scale(1.06); box-shadow: 0 0 38px rgba(15,183,191,.28); } }
 @media (max-width: 480px) { .incoming-call-overlay { align-items: end; padding: 12px 12px max(12px, env(safe-area-inset-bottom)); } .incoming-call-card { border-radius: 24px; } .incoming-call-actions { flex-direction: column-reverse; } .incoming-call-actions button { width: 100%; } }
-@media (max-width: 600px) { .quikey-call-overlay { padding: 0; } .quikey-call-card-active { width: 100%; height: 100svh; border: 0; border-radius: 0; } .quikey-call-actions { flex-direction: column-reverse; } .quikey-call-actions button { width: 100%; } .quikey-call-topbar { padding: 10px 12px; } .quikey-call-topbar-actions { gap: 7px !important; } .quikey-call-header-timer { min-width: 54px; padding: 6px 8px; font-size: 14px; } .quikey-call-topbar button { padding-inline: 13px; } .quikey-call-media-controls { bottom: max(12px, env(safe-area-inset-bottom)); } }
+@media (max-width: 600px) { .quikey-call-overlay { padding: 0; } .quikey-call-card-active { width: 100%; height: 100dvh; border: 0; border-radius: 0; } .quikey-call-actions { flex-direction: column-reverse; } .quikey-call-actions button { width: 100%; } .quikey-call-topbar { min-height: 72px; padding: max(10px, env(safe-area-inset-top)) 12px 10px; } .quikey-call-topbar > div:first-child { min-width: 0; flex-direction: column; align-items: flex-start; gap: 1px; } .quikey-call-with { max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .quikey-call-topbar-actions { gap: 7px !important; } .quikey-call-header-timer { min-width: 54px; padding: 6px 8px; font-size: 14px; } .quikey-call-topbar button { min-height: 40px; padding: 7px 12px; } .quikey-call-stage > .str-video__paginated-grid-layout { padding: 8px; padding-bottom: 88px; } .quikey-call-stage .str-video__paginated-grid-layout__group { grid-template-columns: 1fr !important; grid-template-rows: repeat(2, minmax(0, 1fr)) !important; gap: 8px !important; } .quikey-call-stage .str-video__participant-view { border-radius: 14px; } .quikey-call-media-controls { position: fixed; bottom: max(14px, env(safe-area-inset-bottom)); } }
 @media (max-width: 520px) { .chat-video-button { min-width: 44px; width: 44px; height: 44px; } .chat-video-icon { width: 25px; height: 25px; } }
 
 .chat-options {

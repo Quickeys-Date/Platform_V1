@@ -1,10 +1,11 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { apiFetch } from '@/lib/api'
 import toast from 'react-hot-toast'
 import {
-  SpeakerLayout,
+  PaginatedGridLayout,
   StreamCall,
   StreamVideo,
   StreamVideoClient,
@@ -81,7 +82,7 @@ function JoinedStreamCall({
     <StreamVideo client={client}>
       <StreamCall call={streamCall}>
         <div className="quikey-call-stage">
-          <SpeakerLayout participantsBarPosition="bottom" />
+          <PaginatedGridLayout />
           <div className="quikey-call-media-controls" aria-label="Camera and microphone controls">
             <ToggleAudioPublishingButton />
             <ToggleVideoPublishingButton />
@@ -101,6 +102,8 @@ export function QuiKeyCall({ conversationId, userId, otherName }: { conversation
   const [seconds, setSeconds] = useState(120)
   const [available, setAvailable] = useState<boolean | null>(null)
   const [confirmStart, setConfirmStart] = useState(false)
+  const [readyToJoin, setReadyToJoin] = useState(false)
+  const [checkingMedia, setCheckingMedia] = useState(false)
   const minuteAlertShown = useRef(false)
   const connectionError = useCallback(() => {
     toast.error('The call could not connect. Check camera and microphone access.')
@@ -148,7 +151,22 @@ export function QuiKeyCall({ conversationId, userId, otherName }: { conversation
 
   useEffect(() => {
     minuteAlertShown.current = false
+    setReadyToJoin(false)
   }, [call?.id])
+
+  const prepareMedia = async () => {
+    setCheckingMedia(true)
+    try {
+      if (!navigator.mediaDevices?.getUserMedia) throw new Error('Media devices unavailable')
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+      stream.getTracks().forEach(track => track.stop())
+      setReadyToJoin(true)
+    } catch {
+      toast.error('Allow camera and microphone access in your browser to join the call.')
+    } finally {
+      setCheckingMedia(false)
+    }
+  }
 
   useEffect(() => {
     if (call?.status !== 'active' || seconds > 60 || seconds <= 0 || minuteAlertShown.current) return
@@ -217,13 +235,24 @@ export function QuiKeyCall({ conversationId, userId, otherName }: { conversation
       </div>
     </div>}
 
-    {(incoming || waiting || active) && <div className="quikey-call-overlay" role="dialog" aria-modal="true" aria-label="QuiKey Chat">
-      <div className={`quikey-call-card${active ? ' quikey-call-card-active' : ''}`}>
+    {(incoming || waiting || active) && typeof document !== 'undefined' && createPortal(<div className="quikey-call-overlay" role="dialog" aria-modal="true" aria-label="QuiKey Chat">
+      <div className={`quikey-call-card${active && readyToJoin ? ' quikey-call-card-active' : ''}`}>
         {incoming && <><p className="quikey-call-kicker">QuiKey Chat</p><h2>{otherName} is inviting you to a two-minute call</h2><p>Camera and microphone access are used only for this live introduction.</p><div className="quikey-call-actions"><button onClick={() => act('decline')} disabled={busy}>Not now</button><button className="quikey-call-primary" onClick={() => act('accept')} disabled={busy}>Accept call</button></div></>}
         {waiting && <><p className="quikey-call-kicker">QuiKey Chat</p><h2>Calling {otherName}…</h2><p>The two-minute timer begins only after they accept.</p><button onClick={() => act('end')} disabled={busy}>Cancel invitation</button></>}
-        {active && <>
+        {active && !readyToJoin && <div className="quikey-call-preflight">
+          <div className="quikey-call-preflight-icon" aria-hidden="true">♥</div>
+          <p className="quikey-call-kicker">Private QuiKey call</p>
+          <h2>Ready to meet {otherName}?</h2>
+          <p>We’ll check your camera and microphone before you enter. The timer starts only after both of you join.</p>
+          <div className="quikey-call-permissions"><span>Camera</span><span>Microphone</span></div>
+          <div className="quikey-call-actions">
+            <button onClick={() => act('end')} disabled={busy}>Leave</button>
+            <button className="quikey-call-primary" onClick={prepareMedia} disabled={checkingMedia}>{checkingMedia ? 'Checking…' : 'Continue to call'}</button>
+          </div>
+        </div>}
+        {active && readyToJoin && <>
           <div className="quikey-call-topbar">
-            <div><strong>QuiKey Chat</strong></div>
+            <div><strong>QuiKey Chat</strong><span className="quikey-call-with">with {otherName}</span></div>
             <div className="quikey-call-topbar-actions">
               <span className={`quikey-call-header-timer${call.ends_at && seconds <= 60 ? ' quikey-call-header-timer-warning' : ''}`} role="timer" aria-live={seconds === 60 ? 'assertive' : 'off'}>
                 {call.ends_at ? `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}` : 'Waiting for both'}
@@ -244,6 +273,6 @@ export function QuiKeyCall({ conversationId, userId, otherName }: { conversation
           </div>
         </>}
       </div>
-    </div>}
+    </div>, document.body)}
   </>
 }

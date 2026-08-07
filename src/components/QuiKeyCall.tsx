@@ -1,12 +1,94 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { apiFetch } from '@/lib/api'
 import toast from 'react-hot-toast'
-import { EmbeddedCall } from '@stream-io/video-react-sdk/embedded'
-import '@stream-io/video-react-sdk/dist/css/embedded.css'
+import {
+  SpeakerLayout,
+  StreamCall,
+  StreamVideo,
+  StreamVideoClient,
+  ToggleAudioPublishingButton,
+  ToggleVideoPublishingButton,
+} from '@stream-io/video-react-sdk'
+import '@stream-io/video-react-sdk/dist/css/styles.css'
 
 type Call = { id: string; initiated_by: string; status: 'pending' | 'active'; call_id?: string; api_key?: string; token?: string; ends_at?: string }
+
+function JoinedStreamCall({
+  apiKey,
+  callId,
+  token,
+  userId,
+  onEnd,
+  onError,
+}: {
+  apiKey: string
+  callId: string
+  token: string
+  userId: string
+  onEnd: () => void
+  onError: () => void
+}) {
+  const [client, setClient] = useState<StreamVideoClient | null>(null)
+  const [streamCall, setStreamCall] = useState<ReturnType<StreamVideoClient['call']> | null>(null)
+
+  useEffect(() => {
+    let disposed = false
+    const videoClient = new StreamVideoClient({
+      apiKey,
+      user: { id: userId, name: 'QuiKeys member' },
+      token,
+    })
+    const nextCall = videoClient.call('default', callId)
+
+    const join = async () => {
+      try {
+        // The QuiKeys accept screen is the lobby. Join immediately after the
+        // browser grants media permission so users are never asked twice.
+        await nextCall.camera.enable()
+        await nextCall.microphone.enable()
+        await nextCall.join()
+        if (disposed) {
+          await nextCall.leave().catch(() => undefined)
+          return
+        }
+        setClient(videoClient)
+        setStreamCall(nextCall)
+      } catch {
+        if (!disposed) onError()
+      }
+    }
+
+    join()
+    return () => {
+      disposed = true
+      nextCall.leave().catch(() => undefined)
+      videoClient.disconnectUser().catch(() => undefined)
+    }
+  }, [apiKey, callId, token, userId, onError])
+
+  if (!client || !streamCall) {
+    return <div className="quikey-call-joining" role="status"><span aria-hidden="true" />Connecting your call…</div>
+  }
+
+  return (
+    <StreamVideo client={client}>
+      <StreamCall call={streamCall}>
+        <div className="quikey-call-stage">
+          <SpeakerLayout participantsBarPosition="bottom" />
+          <div className="quikey-call-media-controls" aria-label="Camera and microphone controls">
+            <ToggleAudioPublishingButton />
+            <ToggleVideoPublishingButton />
+            <button type="button" className="quikey-call-hangup" onClick={onEnd} aria-label="End call">
+              <span aria-hidden="true">☎</span>
+            </button>
+          </div>
+        </div>
+      </StreamCall>
+    </StreamVideo>
+  )
+}
 
 export function QuiKeyCall({ conversationId, userId, otherName }: { conversationId: string; userId: string | null; otherName: string }) {
   const [call, setCall] = useState<Call | null>(null)
@@ -15,6 +97,9 @@ export function QuiKeyCall({ conversationId, userId, otherName }: { conversation
   const [available, setAvailable] = useState<boolean | null>(null)
   const [confirmStart, setConfirmStart] = useState(false)
   const minuteAlertShown = useRef(false)
+  const connectionError = useCallback(() => {
+    toast.error('The call could not connect. Check camera and microphone access.')
+  }, [])
 
   const refresh = async () => {
     try {
@@ -118,14 +203,13 @@ export function QuiKeyCall({ conversationId, userId, otherName }: { conversation
             </div>
           </div>
           <div className="quikey-call-video">
-            <EmbeddedCall
+            <JoinedStreamCall
               apiKey={call.api_key!}
-              callType="default"
               callId={call.call_id!}
-              user={{ id: userId!, name: 'QuiKeys member' }}
+              userId={userId!}
               token={call.token!}
-              layout="SpeakerTop"
-              onError={() => toast.error('The call could not connect. Check camera and microphone access.')}
+              onEnd={() => act('end')}
+              onError={connectionError}
             />
           </div>
         </>}

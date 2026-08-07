@@ -5135,6 +5135,16 @@ body {
 .quikey-call-header-timer-warning { border-color: rgba(255,209,120,.75); background: rgba(217,155,52,.16); color: #ffd178; box-shadow: 0 0 0 4px rgba(255,209,120,.08); }
 .quikey-call-video { position: relative; min-height: 0; overflow: hidden; background: #000; }
 .quikey-call-video, .quikey-call-video > div { width: 100%; height: 100%; }
+.quikey-call-video .str-video { width: 100%; height: 100%; }
+.quikey-call-stage { position: relative; width: 100%; height: 100%; min-height: 0; }
+.quikey-call-stage > .str-video__speaker-layout { height: 100%; }
+.quikey-call-joining { width: 100%; height: 100%; display: grid; place-content: center; justify-items: center; gap: 14px; color: rgba(255,255,255,.72); font-weight: 700; }
+.quikey-call-joining span { width: 42px; height: 42px; border: 3px solid rgba(255,255,255,.18); border-top-color: var(--gold-bright); border-radius: 50%; animation: quikey-call-spin .8s linear infinite; }
+.quikey-call-media-controls { position: absolute; z-index: 4; left: 50%; bottom: 18px; transform: translateX(-50%); display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid rgba(122,242,245,.14); border-radius: 999px; background: rgba(2,20,21,.86); box-shadow: 0 12px 34px rgba(0,0,0,.42); backdrop-filter: blur(10px); }
+.quikey-call-media-controls .str-video__call-controls__button { min-width: 50px; width: 50px; height: 50px; margin: 0; border-radius: 50%; background: #16494c; }
+.quikey-call-hangup { min-width: 54px !important; width: 54px; height: 50px; padding: 0 !important; display: grid; place-items: center; border: 0 !important; background: #df4540 !important; color: #fff !important; font-size: 24px; line-height: 1; transform: rotate(135deg); }
+.quikey-call-hangup span { display: block; }
+@keyframes quikey-call-spin { to { transform: rotate(360deg); } }
 
 /* Familiar, high-contrast in-call controls inspired by common calling apps. */
 .quikey-call-video .str-video__embedded-call-controls.str-video__call-controls {
@@ -5192,7 +5202,7 @@ body {
 .incoming-call-actions button:disabled { opacity: .55; cursor: wait; }
 @keyframes incoming-call-pulse { 50% { transform: scale(1.06); box-shadow: 0 0 38px rgba(15,183,191,.28); } }
 @media (max-width: 480px) { .incoming-call-overlay { align-items: end; padding: 12px 12px max(12px, env(safe-area-inset-bottom)); } .incoming-call-card { border-radius: 24px; } .incoming-call-actions { flex-direction: column-reverse; } .incoming-call-actions button { width: 100%; } }
-@media (max-width: 600px) { .quikey-call-overlay { padding: 0; } .quikey-call-card-active { width: 100%; height: 100svh; border: 0; border-radius: 0; } .quikey-call-actions { flex-direction: column-reverse; } .quikey-call-actions button { width: 100%; } .quikey-call-topbar { padding: 10px 12px; } .quikey-call-topbar-actions { gap: 7px !important; } .quikey-call-header-timer { min-width: 54px; padding: 6px 8px; font-size: 14px; } .quikey-call-topbar button { padding-inline: 13px; } }
+@media (max-width: 600px) { .quikey-call-overlay { padding: 0; } .quikey-call-card-active { width: 100%; height: 100svh; border: 0; border-radius: 0; } .quikey-call-actions { flex-direction: column-reverse; } .quikey-call-actions button { width: 100%; } .quikey-call-topbar { padding: 10px 12px; } .quikey-call-topbar-actions { gap: 7px !important; } .quikey-call-header-timer { min-width: 54px; padding: 6px 8px; font-size: 14px; } .quikey-call-topbar button { padding-inline: 13px; } .quikey-call-media-controls { bottom: max(12px, env(safe-area-inset-bottom)); } }
 @media (max-width: 520px) { .chat-video-button { min-width: 44px; width: 44px; height: 44px; } .chat-video-icon { width: 25px; height: 25px; } }
 
 .chat-options {

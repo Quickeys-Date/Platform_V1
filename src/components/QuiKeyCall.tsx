@@ -5,16 +5,49 @@ import { createPortal } from 'react-dom'
 import { apiFetch } from '@/lib/api'
 import toast from 'react-hot-toast'
 import {
-  PaginatedGridLayout,
+  ParticipantView,
   StreamCall,
   StreamVideo,
   StreamVideoClient,
-  ToggleAudioPublishingButton,
-  ToggleVideoPublishingButton,
+  useCallStateHooks,
 } from '@stream-io/video-react-sdk'
 import '@stream-io/video-react-sdk/dist/css/styles.css'
 
 type Call = { id: string; initiated_by: string; status: 'pending' | 'active'; call_id?: string; api_key?: string; token?: string; started_at?: string; ends_at?: string }
+
+function QuiKeyCallStage({ userId, onEnd }: { userId: string; onEnd: () => void }) {
+  const { useParticipants, useCameraState, useMicrophoneState } = useCallStateHooks()
+  const participants = useParticipants()
+  const { camera, isMute: cameraMuted } = useCameraState()
+  const { microphone, isMute: microphoneMuted } = useMicrophoneState()
+  const localParticipant = participants.find(participant => participant.userId === userId)
+  const remoteParticipant = participants.find(participant => participant.userId !== userId)
+  const mainParticipant = remoteParticipant || localParticipant
+
+  return <div className="quikey-call-stage">
+    <div className="quikey-call-main-video">
+      {mainParticipant && <ParticipantView participant={mainParticipant} />}
+    </div>
+    {remoteParticipant && localParticipant && <div className="quikey-call-self-video" aria-label="Your camera preview">
+      <ParticipantView participant={localParticipant} ParticipantViewUI={null} muteAudio />
+      <span>You</span>
+    </div>}
+    <div className="quikey-call-media-controls" aria-label="Call controls">
+      <button type="button" className={microphoneMuted ? 'is-muted' : ''} onClick={() => microphone.toggle()} aria-label={microphoneMuted ? 'Turn microphone on' : 'Mute microphone'}>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a4 4 0 0 0 4-4V6a4 4 0 0 0-8 0v5a4 4 0 0 0 4 4Z"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6"/></svg>
+        <span>{microphoneMuted ? 'Unmute' : 'Mute'}</span>
+      </button>
+      <button type="button" className={cameraMuted ? 'is-muted' : ''} onClick={() => camera.toggle()} aria-label={cameraMuted ? 'Turn camera on' : 'Turn camera off'}>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="13" height="12" rx="3"/><path d="m16 10 5-3v10l-5-3"/></svg>
+        <span>{cameraMuted ? 'Camera on' : 'Camera off'}</span>
+      </button>
+      <button type="button" className="quikey-call-hangup" onClick={onEnd} aria-label="End call">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 15.5c4.8-4.2 11.2-4.2 16 0l-2.7 3-3-2v-2.3a10 10 0 0 0-4.6 0v2.3l-3 2-2.7-3Z"/></svg>
+        <span>End</span>
+      </button>
+    </div>
+  </div>
+}
 
 function JoinedStreamCall({
   apiKey,
@@ -44,6 +77,12 @@ function JoinedStreamCall({
       token,
     })
     const nextCall = videoClient.call('default', callId)
+    nextCall.microphone.setDefaultConstraints({
+      echoCancellation: true,
+      noiseSuppression: true,
+      autoGainControl: true,
+      channelCount: 1,
+    })
 
     const join = async () => {
       try {
@@ -81,16 +120,7 @@ function JoinedStreamCall({
   return (
     <StreamVideo client={client}>
       <StreamCall call={streamCall}>
-        <div className="quikey-call-stage">
-          <PaginatedGridLayout />
-          <div className="quikey-call-media-controls" aria-label="Camera and microphone controls">
-            <ToggleAudioPublishingButton />
-            <ToggleVideoPublishingButton />
-            <button type="button" className="quikey-call-hangup" onClick={onEnd} aria-label="End call">
-              <span aria-hidden="true">☎</span>
-            </button>
-          </div>
-        </div>
+        <QuiKeyCallStage userId={userId} onEnd={onEnd} />
       </StreamCall>
     </StreamVideo>
   )

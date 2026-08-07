@@ -10,6 +10,7 @@ import { apiFetch } from '@/lib/api'
 
 const FEED_CACHE_KEY = 'quikeys-feed-cache-v1'
 const FEED_CACHE_TTL = 5 * 60 * 1000
+const PAX_PROMPT_SESSION_KEY = 'quikeys-pax-prompted-trigger-ids'
 
 type FeedCache = {
   profiles: Profile[]
@@ -54,8 +55,13 @@ export default function FeedPage() {
         const data = await response.json()
         const pending = data.triggers || []
         if (pending.length) {
-          setRedirecting(true)
           const ids = pending.map((trigger: { id: string }) => trigger.id).join(',')
+          // An unfinished Pax check-in must not trap someone in a redirect
+          // loop. Prompt once per browser session; Back/Return then stays on
+          // Connections while the underlying trigger remains available.
+          if (sessionStorage.getItem(PAX_PROMPT_SESSION_KEY) === ids) return
+          sessionStorage.setItem(PAX_PROMPT_SESSION_KEY, ids)
+          setRedirecting(true)
           window.location.href = `/pax/checkin?triggers=${encodeURIComponent(ids)}&index=0&type=INACTIVITY`
         }
       } catch { /* The feed remains usable if the optional Pax check fails. */ }

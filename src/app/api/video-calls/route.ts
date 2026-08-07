@@ -105,7 +105,6 @@ export async function POST(req: NextRequest) {
     if (action === 'accept') {
       if (call.initiated_by === user.id) return NextResponse.json({ error: 'The other person must accept this call.' }, { status: 400 })
       const now = new Date()
-      const endsAt = new Date(now.getTime() + 120_000)
       const streamCallId = `quikey-${call.id}`
       const { client } = getStreamClient()
 
@@ -144,10 +143,35 @@ export async function POST(req: NextRequest) {
       })
       const { data: active, error } = await supabase.from('video_calls').update({
         status: 'active', room_name: streamCallId, room_url: null,
-        started_at: now.toISOString(), ends_at: endsAt.toISOString(), updated_at: now.toISOString(),
+        // Accepting is not the timed call start. Both browsers must finish
+        // media setup and join before the two-minute clock begins.
+        started_at: null, ends_at: null, updated_at: now.toISOString(),
       }).eq('id', call.id).select().single()
       if (error) return NextResponse.json({ error: error.message }, { status: 500 })
       return NextResponse.json({ call: addCredentials(active, user.id) })
+    }
+
+    if (action === 'joined') {
+      if (call.status !== 'active') return NextResponse.json({ error: 'This call is not active.' }, { status: 400 })
+      const joinedColumn = user.id === call.initiated_by ? 'initiator_joined_at' : 'recipient_joined_at'
+      const otherColumn = user.id === call.initiated_by ? 'recipient_joined_at' : 'initiator_joined_at'
+      const joinedAt = new Date().toISOString()
+      const { data: joined, error: joinedError } = await supabase.from('video_calls')
+        .update({ [joinedColumn]: joinedAt, updated_at: joinedAt })
+        .eq('id', call.id).select().single()
+      if (joinedError) return NextResponse.json({ error: joinedError.message }, { status: 500 })
+
+      let ready = joined
+      if (joined[otherColumn] && !joined.started_at) {
+        const startedAt = new Date()
+        const endsAt = new Date(startedAt.getTime() + 120_000)
+        const { data: started, error: startError } = await supabase.from('video_calls').update({
+          started_at: startedAt.toISOString(), ends_at: endsAt.toISOString(), updated_at: startedAt.toISOString(),
+        }).eq('id', call.id).is('started_at', null).select().single()
+        if (startError) return NextResponse.json({ error: startError.message }, { status: 500 })
+        ready = started
+      }
+      return NextResponse.json({ call: addCredentials(ready, user.id) })
     }
 
     return NextResponse.json({ error: 'Unsupported action' }, { status: 400 })

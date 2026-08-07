@@ -13,7 +13,7 @@ import {
 } from '@stream-io/video-react-sdk'
 import '@stream-io/video-react-sdk/dist/css/styles.css'
 
-type Call = { id: string; initiated_by: string; status: 'pending' | 'active'; call_id?: string; api_key?: string; token?: string; ends_at?: string }
+type Call = { id: string; initiated_by: string; status: 'pending' | 'active'; call_id?: string; api_key?: string; token?: string; started_at?: string; ends_at?: string }
 
 function JoinedStreamCall({
   apiKey,
@@ -22,6 +22,7 @@ function JoinedStreamCall({
   userId,
   onEnd,
   onError,
+  onJoined,
 }: {
   apiKey: string
   callId: string
@@ -29,6 +30,7 @@ function JoinedStreamCall({
   userId: string
   onEnd: () => void
   onError: () => void
+  onJoined: () => void
 }) {
   const [client, setClient] = useState<StreamVideoClient | null>(null)
   const [streamCall, setStreamCall] = useState<ReturnType<StreamVideoClient['call']> | null>(null)
@@ -37,7 +39,7 @@ function JoinedStreamCall({
     let disposed = false
     const videoClient = new StreamVideoClient({
       apiKey,
-      user: { id: userId, name: 'QuiKeys member' },
+      user: { id: userId },
       token,
     })
     const nextCall = videoClient.call('default', callId)
@@ -46,8 +48,10 @@ function JoinedStreamCall({
       try {
         // The QuiKeys accept screen is the lobby. Join immediately after the
         // browser grants media permission so users are never asked twice.
-        await nextCall.camera.enable()
-        await nextCall.microphone.enable()
+        await Promise.allSettled([
+          nextCall.camera.enable(),
+          nextCall.microphone.enable(),
+        ])
         await nextCall.join()
         if (disposed) {
           await nextCall.leave().catch(() => undefined)
@@ -55,6 +59,7 @@ function JoinedStreamCall({
         }
         setClient(videoClient)
         setStreamCall(nextCall)
+        onJoined()
       } catch {
         if (!disposed) onError()
       }
@@ -66,7 +71,7 @@ function JoinedStreamCall({
       nextCall.leave().catch(() => undefined)
       videoClient.disconnectUser().catch(() => undefined)
     }
-  }, [apiKey, callId, token, userId, onError])
+  }, [apiKey, callId, token, userId, onError, onJoined])
 
   if (!client || !streamCall) {
     return <div className="quikey-call-joining" role="status"><span aria-hidden="true" />Connecting your call…</div>
@@ -110,7 +115,17 @@ export function QuiKeyCall({ conversationId, userId, otherName }: { conversation
       }
       const data = await response.json()
       setAvailable(data.available !== false)
-      setCall(data.call)
+      // GET returns a freshly generated Stream token. Replacing the active
+      // call object on every poll remounts the video client, causing mobile
+      // video to blink and reconnect. Keep the original credentials until
+      // the call actually changes or ends.
+      setCall(current => (
+        current?.status === 'active' &&
+        data.call?.status === 'active' &&
+        current.id === data.call.id
+          ? { ...current, started_at: data.call.started_at, ends_at: data.call.ends_at }
+          : data.call
+      ))
     } catch {
       setAvailable(false)
     }
@@ -157,6 +172,20 @@ export function QuiKeyCall({ conversationId, userId, otherName }: { conversation
     else setCall(data.call)
   }
 
+  const markJoined = useCallback(async () => {
+    const response = await apiFetch(`/api/video-calls?conversation_id=${conversationId}`, {
+      method: 'POST', body: JSON.stringify({ action: 'joined', call_id: call?.id }),
+    })
+    const data = await response.json().catch(() => ({}))
+    if (!response.ok) {
+      toast.error(data.error || 'The timed call could not start.')
+      return
+    }
+    setCall(current => current && data.call?.id === current.id
+      ? { ...current, started_at: data.call.started_at, ends_at: data.call.ends_at }
+      : current)
+  }, [call?.id, conversationId])
+
   const incoming = call?.status === 'pending' && call.initiated_by !== userId
   const waiting = call?.status === 'pending' && call.initiated_by === userId
   const active = call?.status === 'active' && call.call_id && call.api_key && call.token && userId
@@ -196,8 +225,8 @@ export function QuiKeyCall({ conversationId, userId, otherName }: { conversation
           <div className="quikey-call-topbar">
             <div><strong>QuiKey Chat</strong></div>
             <div className="quikey-call-topbar-actions">
-              <span className={`quikey-call-header-timer${seconds <= 60 ? ' quikey-call-header-timer-warning' : ''}`} role="timer" aria-live={seconds === 60 ? 'assertive' : 'off'}>
-                {Math.floor(seconds / 60)}:{String(seconds % 60).padStart(2, '0')}
+              <span className={`quikey-call-header-timer${call.ends_at && seconds <= 60 ? ' quikey-call-header-timer-warning' : ''}`} role="timer" aria-live={seconds === 60 ? 'assertive' : 'off'}>
+                {call.ends_at ? `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}` : 'Waiting for both'}
               </span>
               <button onClick={() => act('end')} aria-label="End call">End call</button>
             </div>
@@ -210,6 +239,7 @@ export function QuiKeyCall({ conversationId, userId, otherName }: { conversation
               token={call.token!}
               onEnd={() => act('end')}
               onError={connectionError}
+              onJoined={markJoined}
             />
           </div>
         </>}

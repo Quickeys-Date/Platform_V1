@@ -147,7 +147,11 @@ export async function middleware(request: NextRequest) {
   }
 
   if (!onboardingProfile.profile_complete) {
-    if (isBasicInformation || isPaxWelcome) return supabaseResponse
+    // A profile save and the following navigation can reach different edge
+    // instances. Allow the member to continue from the completion screen into
+    // Pax even if that instance briefly reads the previous profile flag. The
+    // Pax completion write repairs both onboarding flags before entering feed.
+    if (isBasicInformation || isPaxWelcome || isPaxOnboarding) return supabaseResponse
 
     if (!isPaxWelcome) {
       return NextResponse.redirect(new URL('/onboarding/welcome', request.url))

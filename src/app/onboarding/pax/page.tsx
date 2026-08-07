@@ -62,7 +62,10 @@ export default function PaxOnboardingPage() {
       if (user) {
         const { error } = await supabase
           .from('profiles')
-          .update({ pax_onboarded: true })
+          .update({
+            profile_complete: true,
+            pax_onboarded: true,
+          })
           .eq('id', user.id)
 
         if (error) {

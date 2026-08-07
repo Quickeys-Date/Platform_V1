@@ -4,15 +4,53 @@ import { useEffect } from 'react'
 
 type Tone = 'incoming' | 'outgoing' | null
 
+type AudioWindow = typeof window & { webkitAudioContext?: typeof AudioContext }
+
+let sharedContext: AudioContext | null = null
+
+function getAudioContext() {
+  if (sharedContext && sharedContext.state !== 'closed') return sharedContext
+  const AudioContextClass = window.AudioContext || (window as AudioWindow).webkitAudioContext
+  if (!AudioContextClass) return null
+  sharedContext = new AudioContextClass()
+  return sharedContext
+}
+
+async function unlockAudio() {
+  const context = getAudioContext()
+  if (!context) return
+  try {
+    if (context.state === 'suspended') await context.resume()
+    // A silent buffer marks this audio context as user-authorized in Chrome,
+    // Safari and mobile browsers. Later incoming calls can then ring without
+    // requiring another tap.
+    const source = context.createBufferSource()
+    source.buffer = context.createBuffer(1, 1, 22050)
+    source.connect(context.destination)
+    source.start(0)
+  } catch {
+    // Keep the listeners active so a later interaction can try again.
+  }
+}
+
 export function useCallTone(tone: Tone) {
   useEffect(() => {
+    if (typeof window === 'undefined') return
+    const prime = () => { void unlockAudio() }
+    window.addEventListener('pointerdown', prime, { passive: true })
+    window.addEventListener('touchstart', prime, { passive: true })
+    window.addEventListener('keydown', prime)
+    return () => {
+      window.removeEventListener('pointerdown', prime)
+      window.removeEventListener('touchstart', prime)
+      window.removeEventListener('keydown', prime)
+    }
+  }, [])
+
+  useEffect(() => {
     if (!tone || typeof window === 'undefined') return
-
-    const AudioContextClass = window.AudioContext ||
-      (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
-    if (!AudioContextClass) return
-
-    const context = new AudioContextClass()
+    const context = getAudioContext()
+    if (!context) return
     let stopped = false
     const scheduledTimeouts: number[] = []
 
@@ -58,7 +96,6 @@ export function useCallTone(tone: Tone) {
       window.clearInterval(interval)
       scheduledTimeouts.forEach(window.clearTimeout)
       navigator.vibrate?.(0)
-      context.close().catch(() => undefined)
     }
   }, [tone])
 }

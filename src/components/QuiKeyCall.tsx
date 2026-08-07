@@ -27,7 +27,14 @@ function QuiKeyCallStage({ userId, otherName, onEnd }: { userId: string; otherNa
 
   return <div className="quikey-call-stage">
     <div className="quikey-call-main-video">
-      {mainParticipant && <ParticipantView participant={mainParticipant} ParticipantViewUI={null} />}
+      {mainParticipant && <ParticipantView
+        participant={mainParticipant}
+        ParticipantViewUI={null}
+        // Before the other member finishes joining, the main tile falls back
+        // to the local participant. Never play that local microphone through
+        // the phone speaker or it creates immediate acoustic echo.
+        muteAudio={!remoteParticipant}
+      />}
       {mainParticipant && <span className="quikey-call-participant-name">{remoteParticipant ? otherName : 'You'}</span>}
     </div>
     {remoteParticipant && localParticipant && <div className="quikey-call-self-video" aria-label="Your camera preview">

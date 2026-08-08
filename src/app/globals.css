@@ -4309,7 +4309,15 @@ body {
 }
 
 .bottom-nav-admin-link {
-  display: none;
+  display: flex;
+  flex: 0 1 54px;
+  color: rgba(255, 199, 102, 0.78);
+}
+
+.bottom-nav-admin-link .bottom-nav-label {
+  font-size: 8px;
+  line-height: 1.05;
+  text-align: center;
 }
 
 /* Authenticated profile: the content owns the scroll area and always ends
@@ -4418,6 +4426,7 @@ body {
 
   .bottom-nav-admin-link {
     display: flex;
+    flex: none;
     margin-top: 8px;
     padding-top: 10px;
     border-top-color: rgba(217, 155, 52, 0.22);

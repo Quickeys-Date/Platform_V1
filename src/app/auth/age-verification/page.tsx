@@ -47,7 +47,19 @@ export default function AgeVerificationPage() {
         router.replace('/onboarding/welcome')
         return
       }
-      setDateOfBirth(data?.date_of_birth || '')
+      // Signup records the date in auth metadata before the profile trigger
+      // copies it. Use that original value when the trigger is delayed or an
+      // older database installation did not copy the field.
+      const signupDateOfBirth = typeof user.user_metadata?.date_of_birth === 'string'
+        ? user.user_metadata.date_of_birth
+        : ''
+      const profileDateOfBirth = data?.date_of_birth && !data.date_of_birth.startsWith('1900-')
+        ? data.date_of_birth
+        : ''
+      setDateOfBirth(profileDateOfBirth || signupDateOfBirth)
+      if (!profileDateOfBirth && !signupDateOfBirth) {
+        setError('Your date of birth was not saved. Please contact the QuiKeys team for assistance.')
+      }
       setLoading(false)
     }
     load()
@@ -58,7 +70,11 @@ export default function AgeVerificationPage() {
     setSubmitting(true)
     setError('')
     try {
-      const response = await fetch('/api/beta/confirm-age', { method: 'POST' })
+      const response = await fetch('/api/beta/confirm-age', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date_of_birth: dateOfBirth }),
+      })
       const data = await response.json()
       if (!response.ok) {
         setError(data.error || 'Unable to confirm your eligibility.')
@@ -114,7 +130,7 @@ export default function AgeVerificationPage() {
           )}
 
           {error && <p className={styles.error} role="alert">{error}</p>}
-          <button type="button" className={styles.uploadButton} onClick={continueToReview} disabled={loading || !confirmed || submitting || (age !== null && age < 18)}>
+          <button type="button" className={styles.uploadButton} onClick={continueToReview} disabled={loading || !dateOfBirth || !confirmed || submitting || (age !== null && age < 18)}>
             <span>{submitting ? 'Submitting…' : 'Continue to Beta Review'}</span>
             <span aria-hidden="true">→</span>
           </button>

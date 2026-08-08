@@ -119,6 +119,9 @@ def capture_stage_mocks():
         "age-confirmation": ("STEP 3 OF 5", "Confirm You're 18 or Older", "QuiKeys is an adults-only experience. Review your date of birth and confirm your eligibility before beta review.", "Continue to Beta Review", "3"),
         "pending-approval": ("QUIKEYS™ V1 BETA", "Your account is under review", "The QuiKeys team is reviewing your account. We'll email you when it is approved.", "Sign out", "✓"),
     }
+    logo_data = "data:image/png;base64," + base64.b64encode(
+        (ROOT / "public" / "quikeys-logo.png").read_bytes()
+    ).decode()
     chrome = Path(r"C:\Program Files\Google\Chrome\Application\chrome.exe")
     if not chrome.exists():
         chrome = Path(r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe")
@@ -136,7 +139,8 @@ def capture_stage_mocks():
                     body{{display:grid;place-items:center;background:radial-gradient(circle at 50% 24%,#0b4548 0,transparent 34%),linear-gradient(145deg,#061b1e,#090909 54%,#021415)}}
                     .frame{{position:fixed;inset:18px;border:1px solid rgba(231,174,66,.34)}}
                     main{{position:relative;width:min(680px,calc(100% - 40px));text-align:center;padding:34px 26px}}
-                    .logo{{width:76px;height:76px;margin:0 auto 26px;border-radius:50%;display:grid;place-items:center;border:1px solid #9e7020;background:#041416;color:#e7ae42;font:700 34px Georgia}} 
+                    .logo{{width:76px;height:76px;margin:0 auto 26px;border-radius:50%;display:grid;place-items:center;border:1px solid #9e7020;background:#041416;overflow:hidden}}
+                    .logo img{{width:100%;height:100%;object-fit:contain}}
                     .eyebrow{{color:#ffc766;font-size:13px;font-weight:800;letter-spacing:.18em}}
                     .symbol{{width:56px;height:56px;margin:22px auto;border:1px solid #e7ae42;border-radius:50%;display:grid;place-items:center;color:#ffc766;font-size:27px}}
                     h1{{margin:18px 0;color:#fff4df;font:700 clamp(32px,4vw,48px)/1.08 Georgia}}
@@ -145,7 +149,7 @@ def capture_stage_mocks():
                     .detail small{{color:#809596;font-weight:700;letter-spacing:.12em}} .detail strong{{color:#ffc766;font:700 24px Georgia}} .detail span{{font-size:13px;color:#c4d0d0}} .detail label{{margin-top:12px;line-height:1.45}}
                     button{{margin-top:30px;padding:12px 26px;border:1px solid #b27c20;border-radius:999px;background:#06272a;color:#ffc766;font-weight:800;font-size:14px}}
                     @media(max-width:600px){{.frame{{inset:10px}} main{{padding:22px 14px}} .logo{{width:64px;height:64px;margin-bottom:22px}} h1{{font-size:34px}} p{{font-size:14px}} .detail{{padding:18px}}}}
-                </style></head><body><div class="frame"></div><main><div class="logo">Q</div><div class="eyebrow">{eyebrow}</div><div class="symbol">{symbol}</div><h1>{title}</h1><p>{description}</p>{extra}<button>{action}</button></main></body></html>''')
+                </style></head><body><div class="frame"></div><main><div class="logo"><img src="{logo_data}" alt="QuiKeys logo"></div><div class="eyebrow">{eyebrow}</div><div class="symbol">{symbol}</div><h1>{title}</h1><p>{description}</p>{extra}<button>{action}</button></main></body></html>''')
                 page.screenshot(path=str(CAPTURES / f"{device}-{slug}.png"), full_page=True)
             context.close()
         browser.close()
